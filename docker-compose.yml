@@ -1,0 +1,8 @@
+services:
+  app:
+    build:
+      context: .
+      target: development
+    env_file: ./.env
+    volumes:
+      - ./:/project:delegated
