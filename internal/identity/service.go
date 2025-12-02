@@ -42,7 +42,7 @@ func (s *BotService) RegisterBot(ctx context.Context, username string) (string, 
 
 		return regBotResp.BotId, nil
 	case "Common.ErrorResponse":
-		return "", api.TransformErrorResponse(resp.Body)
+		return "", api.ErrorResponseToError(resp.Body)
 	default:
 		return "", errors.New("unknown response")
 	}
@@ -70,7 +70,7 @@ func (s *BotService) GetBotByUsername(ctx context.Context, username string) (*Bo
 
 		return fromProtoBot(getBotResp.Bot), nil
 	case "Common.ErrorResponse":
-		return nil, api.TransformErrorResponse(resp.Body)
+		return nil, api.ErrorResponseToError(resp.Body)
 	default:
 		return nil, errors.New("unknown response")
 	}

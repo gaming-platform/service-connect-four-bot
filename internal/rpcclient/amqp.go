@@ -135,23 +135,23 @@ func newResponseChannels() *responseChannels {
 	}
 }
 
-func (cr *responseChannels) add(corrId string) chan amqp091.Delivery {
-	cr.mutex.Lock()
-	defer cr.mutex.Unlock()
+func (rc *responseChannels) add(corrId string) chan amqp091.Delivery {
+	rc.mutex.Lock()
+	defer rc.mutex.Unlock()
 	respChan := make(chan amqp091.Delivery)
-	cr.responses[corrId] = respChan
+	rc.responses[corrId] = respChan
 	return respChan
 }
 
-func (cr *responseChannels) get(corrId string) (chan amqp091.Delivery, bool) {
-	cr.mutex.Lock()
-	defer cr.mutex.Unlock()
-	respChan, ok := cr.responses[corrId]
+func (rc *responseChannels) get(corrId string) (chan amqp091.Delivery, bool) {
+	rc.mutex.Lock()
+	defer rc.mutex.Unlock()
+	respChan, ok := rc.responses[corrId]
 	return respChan, ok
 }
 
-func (cr *responseChannels) delete(corrId string) {
-	cr.mutex.Lock()
-	defer cr.mutex.Unlock()
-	delete(cr.responses, corrId)
+func (rc *responseChannels) delete(corrId string) {
+	rc.mutex.Lock()
+	defer rc.mutex.Unlock()
+	delete(rc.responses, corrId)
 }
