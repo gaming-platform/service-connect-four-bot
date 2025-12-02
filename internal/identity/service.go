@@ -48,16 +48,16 @@ func (s *BotService) RegisterBot(ctx context.Context, username string) (string, 
 	}
 }
 
-func (s *BotService) GetBotByUsername(ctx context.Context, username string) (string, error) {
+func (s *BotService) GetBotByUsername(ctx context.Context, username string) (*Bot, error) {
 	req := identityv1.GetBotByUsername{Username: username}
 	reqBody, err := proto.Marshal(&req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: "Identity.GetBotByUsername", Body: reqBody})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	switch resp.Name {
@@ -65,13 +65,13 @@ func (s *BotService) GetBotByUsername(ctx context.Context, username string) (str
 		var getBotResp identityv1.GetBotByUsernameResponse
 		err = proto.Unmarshal(resp.Body, &getBotResp)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
-		return getBotResp.Bot.BotId, nil
+		return fromProtoBot(getBotResp.Bot), nil
 	case "Common.ErrorResponse":
-		return "", api.TransformErrorResponse(resp.Body)
+		return nil, api.TransformErrorResponse(resp.Body)
 	default:
-		return "", errors.New("unknown response")
+		return nil, errors.New("unknown response")
 	}
 }

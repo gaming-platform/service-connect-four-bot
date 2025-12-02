@@ -26,9 +26,20 @@ func main() {
 
 	botSvc := identity.NewBotService(rpcClient)
 
-	botId, err := botSvc.RegisterBot(ctx, cfg.Username)
+	bot, err := botSvc.GetBotByUsername(ctx, cfg.Username)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	var botId string
+	switch bot {
+	case nil:
+		botId, err = botSvc.RegisterBot(ctx, cfg.Username)
+		if err != nil {
+			log.Fatal(err)
+		}
+	default:
+		botId = bot.BotId
 	}
 
 	log.Printf("Continuing with bot id: %s", botId)
