@@ -24,23 +24,21 @@ func main() {
 	}
 	defer rpcClient.Close()
 
-	botSvc := identity.NewBotService(rpcClient)
-
-	bot, err := botSvc.GetBotByUsername(ctx, cfg.Username)
+	botId, err := requestBotId(ctx, identity.NewBotService(rpcClient), cfg.Username)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var botId string
-	switch bot {
-	case nil:
-		botId, err = botSvc.RegisterBot(ctx, cfg.Username)
-		if err != nil {
-			log.Fatal(err)
-		}
-	default:
-		botId = bot.BotId
-	}
-
 	log.Printf("Continuing with bot id: %s", botId)
+}
+
+func requestBotId(ctx context.Context, botSvc *identity.BotService, username string) (string, error) {
+	bot, err := botSvc.GetBotByUsername(ctx, username)
+	if err != nil {
+		return "", err
+	} else if bot == nil {
+		return botSvc.RegisterBot(ctx, username)
+	} else {
+		return bot.BotId, nil
+	}
 }

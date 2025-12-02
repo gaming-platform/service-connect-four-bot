@@ -8,7 +8,7 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 )
 
-type AmqpRpcClient struct {
+type amqpRpcClient struct {
 	connection           *amqp091.Connection
 	channel              *amqp091.Channel
 	responsesMessages    <-chan amqp091.Delivery
@@ -19,7 +19,7 @@ type AmqpRpcClient struct {
 	syncClose            sync.Once
 }
 
-func NewAmqpRpcClient(url string, timeout time.Duration) (*AmqpRpcClient, error) {
+func NewAmqpRpcClient(url string, timeout time.Duration) (RpcClient, error) {
 	conn, err := amqp091.Dial(url)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func NewAmqpRpcClient(url string, timeout time.Duration) (*AmqpRpcClient, error)
 		return nil, err
 	}
 
-	client := &AmqpRpcClient{
+	client := &amqpRpcClient{
 		connection:           conn,
 		channel:              ch,
 		responsesMessages:    respMsgs,
@@ -61,7 +61,7 @@ func NewAmqpRpcClient(url string, timeout time.Duration) (*AmqpRpcClient, error)
 	return client, nil
 }
 
-func (c *AmqpRpcClient) Call(ctx context.Context, req Message) (Message, error) {
+func (c *amqpRpcClient) Call(ctx context.Context, req Message) (Message, error) {
 	corrId := c.correlationIdCounter.nextString()
 
 	respChan := c.responseChannels.add(corrId)
@@ -95,7 +95,7 @@ func (c *AmqpRpcClient) Call(ctx context.Context, req Message) (Message, error) 
 	}
 }
 
-func (c *AmqpRpcClient) Close() error {
+func (c *amqpRpcClient) Close() error {
 	var err error
 
 	c.syncClose.Do(func() {
@@ -111,7 +111,7 @@ func (c *AmqpRpcClient) Close() error {
 	return err
 }
 
-func (c *AmqpRpcClient) consumeResponses() {
+func (c *amqpRpcClient) consumeResponses() {
 	for {
 		select {
 		case resp := <-c.responsesMessages:
