@@ -11,6 +11,7 @@ import (
 type amqpRpcClient struct {
 	connection           *amqp091.Connection
 	channel              *amqp091.Channel
+	messageRouter        AmqpMessageRouter
 	responsesMessages    <-chan amqp091.Delivery
 	responseChannels     *responseChannels
 	correlationIdCounter *counter
@@ -19,7 +20,7 @@ type amqpRpcClient struct {
 	syncClose            sync.Once
 }
 
-func NewAmqpRpcClient(url string, timeout time.Duration) (RpcClient, error) {
+func NewAmqpRpcClient(url string, timeout time.Duration, msgRouter AmqpMessageRouter) (RpcClient, error) {
 	conn, err := amqp091.Dial(url)
 	if err != nil {
 		return nil, err
@@ -49,6 +50,7 @@ func NewAmqpRpcClient(url string, timeout time.Duration) (RpcClient, error) {
 	client := &amqpRpcClient{
 		connection:           conn,
 		channel:              ch,
+		messageRouter:        msgRouter,
 		responsesMessages:    respMsgs,
 		correlationIdCounter: newCounter(),
 		responseChannels:     newResponseChannels(),
@@ -70,10 +72,12 @@ func (c *amqpRpcClient) Call(ctx context.Context, req Message) (Message, error) 
 	ctx, cancel := withTimeoutIfNone(ctx, c.defaultTimeout)
 	defer cancel()
 
+	route := c.messageRouter.Route(req)
+
 	err := c.channel.PublishWithContext(
 		ctx,
-		"gaming",
-		req.Name,
+		route.exchange,
+		route.routingKey,
 		false,
 		false,
 		amqp091.Publishing{
@@ -154,4 +158,28 @@ func (rc *responseChannels) delete(corrId string) {
 	rc.mutex.Lock()
 	defer rc.mutex.Unlock()
 	delete(rc.responses, corrId)
+}
+
+type AmqpMessageRouter interface {
+	Route(msg Message) Route
+}
+
+type Route struct {
+	exchange   string
+	routingKey string
+}
+
+type RouteMessagesToExchange struct {
+	exchange string
+}
+
+func NewRouteMessagesToExchange(exchange string) *RouteMessagesToExchange {
+	return &RouteMessagesToExchange{exchange: exchange}
+}
+
+func (r *RouteMessagesToExchange) Route(msg Message) Route {
+	return Route{
+		exchange:   r.exchange,
+		routingKey: msg.Name,
+	}
 }

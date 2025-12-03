@@ -14,6 +14,7 @@ type Config struct {
 	RabbitMqDsn string        `env:"APP_RABBIT_MQ_DSN,required"`
 	NchanSubUrl string        `env:"APP_NCHAN_SUB_URL,required"`
 	RpcTimeout  time.Duration `env:"APP_RPC_TIMEOUT,required"`
+	RpcExchange string        `env:"APP_RPC_EXCHANGE,required"`
 }
 
 func NewConfig() (*Config, error) {

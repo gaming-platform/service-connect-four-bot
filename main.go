@@ -18,7 +18,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	rpcClient, err := rpcclient.NewAmqpRpcClient(cfg.RabbitMqDsn, cfg.RpcTimeout)
+	rpcClient, err := rpcclient.NewAmqpRpcClient(
+		cfg.RabbitMqDsn,
+		cfg.RpcTimeout,
+		rpcclient.NewRouteMessagesToExchange(cfg.RpcExchange),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
