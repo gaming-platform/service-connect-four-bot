@@ -2,16 +2,19 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/caarlos0/env/v11"
 )
 
 type Config struct {
-	Username    string `env:"APP_USERNAME,required"`
-	Level       int    `env:"APP_LEVEL,required"`
-	JoinAfter   int    `env:"APP_JOIN_AFTER,required"`
-	RabbitMqDsn string `env:"APP_RABBIT_MQ_DSN,required"`
-	NchanSubUrl string `env:"APP_NCHAN_SUB_URL,required"`
+	Username    string        `env:"APP_USERNAME,required"`
+	Level       int           `env:"APP_LEVEL,required"`
+	JoinAfter   int           `env:"APP_JOIN_AFTER,required"`
+	RabbitMqDsn string        `env:"APP_RABBIT_MQ_DSN,required"`
+	NchanSubUrl string        `env:"APP_NCHAN_SUB_URL,required"`
+	RpcTimeout  time.Duration `env:"APP_RPC_TIMEOUT,required"`
+	RpcExchange string        `env:"APP_RPC_EXCHANGE,required"`
 }
 
 func NewConfig() (*Config, error) {
