@@ -2,6 +2,7 @@ package rpcclient
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -92,7 +93,11 @@ func (c *amqpRpcClient) Call(ctx context.Context, req Message) (Message, error) 
 	}
 
 	select {
-	case resp := <-respChan:
+	case resp, ok := <-respChan:
+		if !ok {
+			return Message{}, errors.New("response channel closed")
+		}
+
 		return Message{Name: resp.Type, Body: resp.Body}, nil
 	case <-ctx.Done():
 		return Message{}, ctx.Err()
@@ -119,10 +124,10 @@ func (c *amqpRpcClient) consumeResponses() {
 	for {
 		select {
 		case resp := <-c.responsesMessages:
-			if respChan, ok := c.responseChannels.get(resp.CorrelationId); ok {
-				respChan <- resp
-			}
+			c.responseChannels.send(resp.CorrelationId, resp)
+			c.responseChannels.delete(resp.CorrelationId)
 		case <-c.closeChannel:
+			c.responseChannels.deleteAll()
 			return
 		}
 	}
@@ -142,22 +147,36 @@ func newResponseChannels() *responseChannels {
 func (rc *responseChannels) add(corrId string) chan amqp091.Delivery {
 	rc.mutex.Lock()
 	defer rc.mutex.Unlock()
-	respChan := make(chan amqp091.Delivery)
+	respChan := make(chan amqp091.Delivery, 1)
 	rc.responses[corrId] = respChan
 	return respChan
 }
 
-func (rc *responseChannels) get(corrId string) (chan amqp091.Delivery, bool) {
+func (rc *responseChannels) send(corrId string, delivery amqp091.Delivery) {
 	rc.mutex.Lock()
 	defer rc.mutex.Unlock()
-	respChan, ok := rc.responses[corrId]
-	return respChan, ok
+	if respChan, ok := rc.responses[corrId]; ok {
+		respChan <- delivery
+	}
 }
 
 func (rc *responseChannels) delete(corrId string) {
 	rc.mutex.Lock()
 	defer rc.mutex.Unlock()
-	delete(rc.responses, corrId)
+	if respChan, ok := rc.responses[corrId]; ok {
+		close(respChan)
+		delete(rc.responses, corrId)
+	}
+}
+
+func (rc *responseChannels) deleteAll() {
+	rc.mutex.Lock()
+	defer rc.mutex.Unlock()
+
+	for _, respChan := range rc.responses {
+		close(respChan)
+	}
+	rc.responses = make(map[string]chan amqp091.Delivery)
 }
 
 type AmqpMessageRouter interface {
