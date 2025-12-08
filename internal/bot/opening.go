@@ -68,6 +68,8 @@ func (b *OpeningBot) Play(ctx context.Context) error {
 						return err
 					} else if errResp != nil && !errResp.HasViolation("column_already_filled") {
 						break
+					} else if errResp == nil && err == nil {
+						break
 					}
 				}
 			case "ConnectFour.GameAborted",

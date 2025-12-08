@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	commonv1 "github.com/gaming-platform/api/go/common/v1"
 	connectfourv1 "github.com/gaming-platform/api/go/connectfour/v1"
 	"github.com/gaming-platform/connect-four-bot/internal/api"
 	"github.com/gaming-platform/connect-four-bot/internal/rpcclient"
@@ -40,13 +41,13 @@ func (s *GameService) OpenGame(
 		return "", nil, err
 	}
 
-	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: "ConnectFour.OpenGame", Body: reqBody})
+	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: connectfourv1.OpenGameType, Body: reqBody})
 	if err != nil {
 		return "", nil, err
 	}
 
 	switch resp.Name {
-	case "ConnectFour.OpenGameResponse":
+	case connectfourv1.OpenGameResponseType:
 		var openGameResp connectfourv1.OpenGameResponse
 		err = proto.Unmarshal(resp.Body, &openGameResp)
 		if err != nil {
@@ -54,7 +55,7 @@ func (s *GameService) OpenGame(
 		}
 
 		return openGameResp.GameId, nil, nil
-	case "Common.ErrorResponse":
+	case commonv1.ErrorResponseType:
 		errResp, err := api.NewErrorResponse(resp.Body)
 		if err != nil {
 			return "", nil, err
@@ -78,13 +79,13 @@ func (s *GameService) MakeMove(
 		return nil, err
 	}
 
-	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: "ConnectFour.MakeMove", Body: reqBody})
+	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: connectfourv1.MakeMoveType, Body: reqBody})
 	if err != nil {
 		return nil, err
 	}
 
 	switch resp.Name {
-	case "ConnectFour.MakeMoveResponse":
+	case connectfourv1.MakeMoveResponseType:
 		var openGameResp connectfourv1.OpenGameResponse
 		err = proto.Unmarshal(resp.Body, &openGameResp)
 		if err != nil {
@@ -92,7 +93,7 @@ func (s *GameService) MakeMove(
 		}
 
 		return nil, nil
-	case "Common.ErrorResponse":
+	case commonv1.ErrorResponseType:
 		return api.NewErrorResponse(resp.Body)
 	default:
 		return nil, errors.New("unknown response")
