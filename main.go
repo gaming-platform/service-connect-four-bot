@@ -27,7 +27,7 @@ func main() {
 	rpcClient, err := rpcclient.NewAmqpRpcClient(
 		cfg.RabbitMqDsn,
 		cfg.RpcTimeout,
-		rpcclient.NewRouteMessagesToExchange(cfg.RpcExchange),
+		rpcclient.NewRouteMessagesToTransientRpcQueue(cfg.RpcExchange, "TransientRpc"),
 	)
 	if err != nil {
 		log.Fatal(err)
