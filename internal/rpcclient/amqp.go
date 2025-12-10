@@ -3,6 +3,7 @@ package rpcclient
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -200,5 +201,24 @@ func (r *RouteMessagesToExchange) Route(msg Message) Route {
 	return Route{
 		exchange:   r.exchange,
 		routingKey: msg.Name,
+	}
+}
+
+type RouteMessagesToTransientRpcQueue struct {
+	exchange          string
+	transientPartName string
+}
+
+func NewRouteMessagesToTransientRpcQueue(exchange, transientPartName string) *RouteMessagesToTransientRpcQueue {
+	return &RouteMessagesToTransientRpcQueue{
+		exchange:          exchange,
+		transientPartName: transientPartName,
+	}
+}
+
+func (r *RouteMessagesToTransientRpcQueue) Route(msg Message) Route {
+	return Route{
+		exchange:   r.exchange,
+		routingKey: strings.Split(msg.Name, ".")[0] + "." + r.transientPartName,
 	}
 }
