@@ -40,7 +40,8 @@ func (s *Client) Connect(ctx context.Context, sseCh string) (chan ConnectChannel
 	resChan := make(chan ConnectChannelResult, 1)
 	go (func() {
 		defer close(resChan)
-		conn := externalsse.NewConnection(req)
+		client := externalsse.Client{Backoff: externalsse.Backoff{MaxRetries: -1}}
+		conn := client.NewConnection(req)
 		unsubscribe := conn.SubscribeToAll(func(e externalsse.Event) {
 			parts := strings.SplitN(e.Data, ":", 3)
 			if len(parts) < 3 {
