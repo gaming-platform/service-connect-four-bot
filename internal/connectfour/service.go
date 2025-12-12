@@ -28,7 +28,7 @@ func (s *GameService) OpenGame(
 	height int32,
 	stone int32,
 	timer string,
-) (string, *api.ErrorResponse, error) {
+) (string, error) {
 	req := connectfourv1.OpenGame{
 		PlayerId: playerId,
 		Width:    width,
@@ -38,12 +38,12 @@ func (s *GameService) OpenGame(
 	}
 	reqBody, err := proto.Marshal(&req)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: connectfourv1.OpenGameType, Body: reqBody})
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	switch resp.Name {
@@ -51,19 +51,14 @@ func (s *GameService) OpenGame(
 		var openGameResp connectfourv1.OpenGameResponse
 		err = proto.Unmarshal(resp.Body, &openGameResp)
 		if err != nil {
-			return "", nil, err
+			return "", err
 		}
 
-		return openGameResp.GameId, nil, nil
+		return openGameResp.GameId, nil
 	case commonv1.ErrorResponseType:
-		errResp, err := api.NewErrorResponse(resp.Body)
-		if err != nil {
-			return "", nil, err
-		}
-
-		return "", errResp, nil
+		return "", api.ErrorResponseToError(resp.Body)
 	default:
-		return "", nil, errors.New("unknown response")
+		return "", errors.New("unknown response")
 	}
 }
 
@@ -86,15 +81,43 @@ func (s *GameService) MakeMove(
 
 	switch resp.Name {
 	case connectfourv1.MakeMoveResponseType:
-		var openGameResp connectfourv1.OpenGameResponse
-		err = proto.Unmarshal(resp.Body, &openGameResp)
+		return nil, nil
+	case commonv1.ErrorResponseType:
+		return api.NewErrorResponse(resp.Body)
+	default:
+		return nil, errors.New("unknown response")
+	}
+}
+
+func (s *GameService) GetGamesByPlayer(
+	ctx context.Context,
+	playerId string,
+	state connectfourv1.GetGamesByPlayer_State,
+	page int32,
+	limit int32,
+) (*connectfourv1.GetGamesByPlayerResponse, error) {
+	req := connectfourv1.GetGamesByPlayer{PlayerId: playerId, State: state, Page: page, Limit: limit}
+	reqBody, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: connectfourv1.GetGamesByPlayerType, Body: reqBody})
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.Name {
+	case connectfourv1.GetGamesByPlayerResponseType:
+		var getGamesByPlayerResp connectfourv1.GetGamesByPlayerResponse
+		err = proto.Unmarshal(resp.Body, &getGamesByPlayerResp)
 		if err != nil {
 			return nil, err
 		}
 
-		return nil, nil
+		return &getGamesByPlayerResp, nil
 	case commonv1.ErrorResponseType:
-		return api.NewErrorResponse(resp.Body)
+		return nil, api.ErrorResponseToError(resp.Body)
 	default:
 		return nil, errors.New("unknown response")
 	}

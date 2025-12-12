@@ -2,9 +2,9 @@ package bot
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 
+	connectfourv1 "github.com/gaming-platform/api/go/connectfour/v1"
 	"github.com/gaming-platform/connect-four-bot/internal/connectfour"
 	"github.com/gaming-platform/connect-four-bot/internal/sse"
 )
@@ -24,12 +24,10 @@ func NewOpeningBot(botId string, client *sse.Client, cfSvc *connectfour.GameServ
 }
 
 func (b *OpeningBot) Play(ctx context.Context) error {
-	width := int32(7)
-	gameId, errResp, err := b.gameService.OpenGame(ctx, b.botId, width, 6, -1, "move:15000")
+	width := 7
+	gameId, err := b.getGameIdForPlay(ctx, width)
 	if err != nil {
 		return err
-	} else if errResp != nil {
-		return fmt.Errorf("failed to open game: %v", errResp)
 	}
 
 	sseCtx, sseCancel := context.WithCancel(ctx)
@@ -38,10 +36,10 @@ func (b *OpeningBot) Play(ctx context.Context) error {
 
 	for {
 		select {
+		case <-sseCtx.Done():
+			return nil
 		case res := <-resCh:
-			if sseCtx.Err() != nil {
-				return nil
-			} else if res.Error != nil {
+			if res.Error != nil {
 				return res.Error
 			}
 
@@ -62,7 +60,7 @@ func (b *OpeningBot) Play(ctx context.Context) error {
 				}
 
 				for {
-					c := rand.Intn(int(width)) + 1
+					c := rand.Intn(width) + 1
 					errResp, err := b.gameService.MakeMove(sseCtx, gameId, b.botId, int32(c))
 					if err != nil {
 						return err
@@ -81,4 +79,21 @@ func (b *OpeningBot) Play(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func (b *OpeningBot) getGameIdForPlay(ctx context.Context, width int) (string, error) {
+	openGames, err := b.gameService.GetGamesByPlayer(
+		ctx,
+		b.botId,
+		connectfourv1.GetGamesByPlayer_STATE_OPEN,
+		1,
+		1,
+	)
+	if err != nil {
+		return "", err
+	} else if len(openGames.Games) > 0 {
+		return openGames.Games[0].GameId, nil
+	}
+
+	return b.gameService.OpenGame(ctx, b.botId, int32(width), 6, -1, "move:15000")
 }
