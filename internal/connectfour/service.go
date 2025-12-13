@@ -15,7 +15,7 @@ type GameService struct {
 	rpcClient rpcclient.RpcClient
 }
 
-func NewGameServiceService(rpcCl rpcclient.RpcClient) *GameService {
+func NewGameService(rpcCl rpcclient.RpcClient) *GameService {
 	return &GameService{
 		rpcClient: rpcCl,
 	}

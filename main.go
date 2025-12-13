@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/gaming-platform/connect-four-bot/internal/bot"
+	"github.com/gaming-platform/connect-four-bot/internal/chat"
 	"github.com/gaming-platform/connect-four-bot/internal/config"
 	"github.com/gaming-platform/connect-four-bot/internal/connectfour"
 	"github.com/gaming-platform/connect-four-bot/internal/identity"
@@ -35,10 +36,11 @@ func main() {
 	defer rpcClient.Close()
 
 	sseClient := sse.NewClient(cfg.NchanSubUrl)
-	idSvc := identity.NewBotService(rpcClient)
-	gSvc := connectfour.NewGameServiceService(rpcClient)
+	chatSvc := chat.NewChatService(rpcClient)
+	botSvc := identity.NewBotService(rpcClient)
+	gameSvc := connectfour.NewGameService(rpcClient)
 
-	botId, err := requestBotId(ctx, idSvc, cfg.Username)
+	botId, err := requestBotId(ctx, botSvc, cfg.Username)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +48,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go (func() {
-		bt := bot.NewOpeningBot(botId, sseClient, gSvc)
+		bt := bot.NewOpeningBot(botId, sseClient, chatSvc, gameSvc)
 
 		for {
 			if err := bt.Play(ctx); err != nil {
