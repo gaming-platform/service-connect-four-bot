@@ -9,3 +9,5 @@ require (
 	github.com/tmaxmax/go-sse v0.11.0
 	google.golang.org/protobuf v1.36.10
 )
+
+require golang.org/x/sync v0.19.0 // indirect
