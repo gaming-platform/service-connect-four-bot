@@ -65,8 +65,8 @@ func (b *ResumingBot) Play(ctx context.Context) error {
 				b.chatService,
 				b.botId,
 				game.GameId,
-				7,  // Hard coded width, because it's not exposed yet.
-				"", // No chat id, because it's not exposed yet.
+				int(game.Width),
+				game.ChatId,
 				game.CurrentPlayerId,
 			)
 		})
