@@ -45,21 +45,26 @@ func main() {
 		log.Fatal(err)
 	}
 
+	resumingBot, err := bot.NewResumingBot(ctx, botId, sseClient, chatSvc, gameSvc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	bots := [...]bot.Bot{
+		bot.NewOpeningBot(botId, sseClient, chatSvc, gameSvc),
+		resumingBot,
+	}
+
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go (func() {
-		bt := bot.NewOpeningBot(botId, sseClient, chatSvc, gameSvc)
-
-		for {
-			if err := bt.Play(ctx); err != nil {
+	wg.Add(len(bots))
+	for _, bt := range bots {
+		go (func() {
+			if err := bt.Play(ctx); err != nil && ctx.Err() == nil {
 				log.Fatal(err)
-			} else if ctx.Err() != nil {
-				break
 			}
-		}
-
-		wg.Done()
-	})()
+			wg.Done()
+		})()
+	}
 
 	<-ctx.Done()
 	wg.Wait()
