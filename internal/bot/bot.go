@@ -7,7 +7,14 @@ import (
 	"github.com/gaming-platform/connect-four-bot/internal/chat"
 	"github.com/gaming-platform/connect-four-bot/internal/connectfour"
 	"github.com/gaming-platform/connect-four-bot/internal/sse"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
+
+var runningGamesGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "connect_four_bot_running_games",
+	Help: "The number of running games the bot is currently playing.",
+})
 
 type Bot interface {
 	Play(ctx context.Context) error
@@ -24,6 +31,9 @@ func playThrough(
 	chatId string,
 	currentPlayerId string,
 ) error {
+	runningGamesGauge.Inc()
+	defer runningGamesGauge.Dec()
+
 	sseCtx, sseCancel := context.WithCancel(ctx)
 	defer sseCancel()
 	resCh, err := sseClient.Connect(sseCtx, "connect-four-"+gameId)
