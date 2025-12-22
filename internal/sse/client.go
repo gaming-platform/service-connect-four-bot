@@ -9,16 +9,9 @@ import (
 	externalsse "github.com/tmaxmax/go-sse"
 )
 
-type EventCallback func(string, map[string]interface{})
-
 type ConnectChannelResult struct {
-	Event Event
+	Event any
 	Error error
-}
-
-type Event struct {
-	Name    string
-	Payload map[string]interface{}
 }
 
 type Client struct {
@@ -48,12 +41,39 @@ func (s *Client) Connect(ctx context.Context, sseCh string) (chan ConnectChannel
 				return
 			}
 
-			var msg map[string]interface{}
-			if err := json.Unmarshal([]byte(parts[2]), &msg); err != nil {
+			payload := []byte(parts[2])
+			var event any
+			var err error
+
+			switch parts[0] {
+			case "ConnectFour.GameOpened":
+				event, err = castPayloadToEvent[GameOpened](payload)
+			case "ConnectFour.PlayerJoined":
+				event, err = castPayloadToEvent[PlayerJoined](payload)
+			case "ConnectFour.ChatAssigned":
+				event, err = castPayloadToEvent[ChatAssigned](payload)
+			case "ConnectFour.PlayerMoved":
+				event, err = castPayloadToEvent[PlayerMoved](payload)
+			case "ConnectFour.GameAborted":
+				event, err = castPayloadToEvent[GameAborted](payload)
+			case "ConnectFour.GameWon":
+				event, err = castPayloadToEvent[GameWon](payload)
+			case "ConnectFour.GameDrawn":
+				event, err = castPayloadToEvent[GameDrawn](payload)
+			case "ConnectFour.GameTimedOut":
+				event, err = castPayloadToEvent[GameTimedOut](payload)
+			case "ConnectFour.GameResigned":
+				event, err = castPayloadToEvent[GameResigned](payload)
+			default:
 				return
 			}
 
-			resChan <- ConnectChannelResult{Event: Event{Name: parts[0], Payload: msg}}
+			if err != nil {
+				resChan <- ConnectChannelResult{Error: err}
+				return
+			}
+
+			resChan <- ConnectChannelResult{Event: event}
 		})
 		defer unsubscribe()
 
@@ -61,4 +81,11 @@ func (s *Client) Connect(ctx context.Context, sseCh string) (chan ConnectChannel
 	})()
 
 	return resChan, nil
+}
+
+func castPayloadToEvent[T any](payload []byte) (T, error) {
+	var event T
+	err := json.Unmarshal(payload, &event)
+
+	return event, err
 }

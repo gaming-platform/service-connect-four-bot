@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -130,42 +129,20 @@ func (b *JoiningBot) watchLobby(ctx context.Context) error {
 				return res.Error
 			}
 
-			switch res.Event.Name {
-			case "ConnectFour.GameOpened":
-				playerId, ok := res.Event.Payload["playerId"].(string)
-				if !ok {
-					return errors.New("joining bot: opened: could not extract playerId")
-				} else if playerId == b.botId {
+			switch e := res.Event.(type) {
+			case sse.GameOpened:
+				if e.PlayerId == b.botId {
 					continue
 				}
 
-				gameId, ok := res.Event.Payload["gameId"].(string)
-				if !ok {
-					return errors.New("joining bot: opened: could not extract gameId")
-				}
-
-				width, ok := res.Event.Payload["width"].(float64)
-				if !ok {
-					return errors.New("joining bot: opened: could not extract width")
-				}
-
-				height, ok := res.Event.Payload["height"].(float64)
-				if !ok {
-					return errors.New("joining bot: opened: could not extract height")
-				}
-
 				b.games.Store(
-					gameId,
-					openGame{joinAt: time.Now().Add(b.joinAfter), width: int(width), height: int(height)},
+					e.GameId,
+					openGame{joinAt: time.Now().Add(b.joinAfter), width: e.Width, height: e.Height},
 				)
-			case "ConnectFour.PlayerJoined":
-			case "ConnectFour.GameAborted":
-				gameId, ok := res.Event.Payload["gameId"].(string)
-				if !ok {
-					return errors.New("joining bot: closed: could not extract gameId")
-				}
-
-				b.games.Delete(gameId)
+			case sse.GameAborted:
+				b.games.Delete(e.GameId)
+			case sse.PlayerJoined:
+				b.games.Delete(e.GameId)
 			}
 		}
 	}

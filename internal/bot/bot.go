@@ -56,13 +56,9 @@ func playThrough(
 				return res.Error
 			}
 
-			switch res.Event.Name {
-			case "ConnectFour.ChatAssigned":
-				v, ok := res.Event.Payload["chatId"].(string)
-				if !ok {
-					continue
-				}
-				chatId = v
+			switch e := res.Event.(type) {
+			case sse.ChatAssigned:
+				chatId = e.ChatId
 
 				go chatService.WriteMessage(
 					ctx,
@@ -71,25 +67,23 @@ func playThrough(
 					"Good luck, have fun!",
 					"opening",
 				)
-			case "ConnectFour.PlayerJoined":
-				redPlayerId, ok := res.Event.Payload["redPlayerId"].(string)
-				if !ok || redPlayerId != botId {
+			case sse.PlayerJoined:
+				if e.RedPlayerId != botId {
 					continue
 				}
 
 				if err := makeMove(botId, gameId, width, sseCtx, gameService); err != nil {
 					return err
 				}
-			case "ConnectFour.PlayerMoved":
-				nextPlayerId, ok := res.Event.Payload["nextPlayerId"].(string)
-				if !ok || nextPlayerId != botId {
+			case sse.PlayerMoved:
+				if e.NextPlayerId != botId {
 					continue
 				}
 
 				if err := makeMove(botId, gameId, width, sseCtx, gameService); err != nil {
 					return err
 				}
-			case "ConnectFour.GameAborted":
+			case sse.GameAborted:
 				if chatId != "" {
 					go chatService.WriteMessage(
 						ctx,
@@ -100,10 +94,10 @@ func playThrough(
 					)
 				}
 				sseCancel()
-			case "ConnectFour.GameWon",
-				"ConnectFour.GameDrawn",
-				"ConnectFour.GameTimedOut",
-				"ConnectFour.GameResigned":
+			case sse.GameWon,
+				sse.GameDrawn,
+				sse.GameTimedOut,
+				sse.GameResigned:
 				if chatId != "" {
 					go chatService.WriteMessage(
 						ctx,
