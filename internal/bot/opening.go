@@ -21,7 +21,7 @@ func NewOpeningBot(
 	client *sse.Client,
 	chatSvc *chat.ChatService,
 	gameSvc *connectfour.GameService,
-) *OpeningBot {
+) Bot {
 	return &OpeningBot{botId: botId, sseClient: client, chatService: chatSvc, gameService: gameSvc}
 }
 

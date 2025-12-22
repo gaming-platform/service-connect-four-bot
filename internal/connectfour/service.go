@@ -62,6 +62,35 @@ func (s *GameService) OpenGame(
 	}
 }
 
+func (s *GameService) JoinGame(
+	ctx context.Context,
+	gameId string,
+	playerId string,
+) (*api.ErrorResponse, error) {
+	req := connectfourv1.JoinGame{
+		GameId:   gameId,
+		PlayerId: playerId,
+	}
+	reqBody, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: connectfourv1.JoinGameType, Body: reqBody})
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.Name {
+	case connectfourv1.JoinGameResponseType:
+		return nil, nil
+	case commonv1.ErrorResponseType:
+		return api.NewErrorResponse(resp.Body)
+	default:
+		return nil, errors.New("unknown response")
+	}
+}
+
 func (s *GameService) MakeMove(
 	ctx context.Context,
 	gameId string,

@@ -55,6 +55,7 @@ func main() {
 
 	bots := [...]bot.Bot{
 		bot.NewOpeningBot(botId, sseClient, chatSvc, gameSvc),
+		bot.NewJoiningBot(botId, cfg.JoinAfter, sseClient, chatSvc, gameSvc),
 		resumingBot,
 	}
 
