@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/gaming-platform/connect-four-bot/internal/bot"
@@ -14,6 +14,8 @@ import (
 	"github.com/gaming-platform/connect-four-bot/internal/identity"
 	"github.com/gaming-platform/connect-four-bot/internal/rpcclient"
 	"github.com/gaming-platform/connect-four-bot/internal/sse"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -33,6 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	rpcClient = rpcclient.NewPrometheusClient(rpcClient)
 	defer rpcClient.Close()
 
 	sseClient := sse.NewClient(cfg.NchanSubUrl)
@@ -55,19 +58,34 @@ func main() {
 		resumingBot,
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(len(bots))
+	eg, egCtx := errgroup.WithContext(ctx)
+
 	for _, bt := range bots {
-		go (func() {
-			if err := bt.Play(ctx); err != nil && ctx.Err() == nil {
-				log.Fatal(err)
-			}
-			wg.Done()
-		})()
+		eg.Go(func() error {
+			return bt.Play(egCtx)
+		})
 	}
 
-	<-ctx.Done()
-	wg.Wait()
+	eg.Go(func() error {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		srv := &http.Server{Addr: ":80", Handler: mux}
+
+		go func() {
+			<-egCtx.Done()
+			_ = srv.Shutdown(context.Background())
+		}()
+
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			return err
+		}
+
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil && ctx.Err() == nil {
+		log.Fatalf("fatal error: %v", err)
+	}
 }
 
 func requestBotId(ctx context.Context, botSvc *identity.BotService, username string) (string, error) {
