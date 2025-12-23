@@ -118,6 +118,34 @@ func (s *GameService) MakeMove(
 	}
 }
 
+func (s *GameService) GetOpenGames(ctx context.Context, limit int32) (*connectfourv1.GetOpenGamesResponse, error) {
+	req := connectfourv1.GetOpenGames{Limit: limit}
+	reqBody, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: connectfourv1.GetOpenGamesType, Body: reqBody})
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.Name {
+	case connectfourv1.GetOpenGamesResponseType:
+		var getOpenGamesResp connectfourv1.GetOpenGamesResponse
+		err = proto.Unmarshal(resp.Body, &getOpenGamesResp)
+		if err != nil {
+			return nil, err
+		}
+
+		return &getOpenGamesResp, nil
+	case commonv1.ErrorResponseType:
+		return nil, api.ErrorResponseToError(resp.Body)
+	default:
+		return nil, errors.New("unknown response")
+	}
+}
+
 func (s *GameService) GetGamesByPlayer(
 	ctx context.Context,
 	playerId string,

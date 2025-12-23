@@ -53,9 +53,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	joiningBot, err := bot.NewJoiningBot(ctx, botId, cfg.JoinAfter, sseClient, chatSvc, gameSvc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	bots := [...]bot.Bot{
 		bot.NewOpeningBot(botId, sseClient, chatSvc, gameSvc),
-		bot.NewJoiningBot(botId, cfg.JoinAfter, sseClient, chatSvc, gameSvc),
+		joiningBot,
 		resumingBot,
 	}
 

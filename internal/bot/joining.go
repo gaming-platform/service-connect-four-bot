@@ -29,20 +29,42 @@ type JoiningBot struct {
 }
 
 func NewJoiningBot(
+	ctx context.Context,
 	botId string,
 	joinAfter time.Duration,
 	client *sse.Client,
 	chatSvc *chat.ChatService,
 	gameSvc *connectfour.GameService,
-) Bot {
+) (Bot, error) {
+	openGamesResp, err := gameSvc.GetOpenGames(ctx, 100)
+	if err != nil {
+		return nil, fmt.Errorf("joining bot: could not fetch open games: %w", err)
+	}
+
+	games := sync.Map{}
+	for _, game := range openGamesResp.Games {
+		if game.PlayerId == botId {
+			continue
+		}
+
+		games.Store(
+			game.GameId,
+			openGame{
+				joinAt: time.Now().Add(joinAfter),
+				width:  int(game.Width),
+				height: int(game.Height),
+			},
+		)
+	}
+
 	return &JoiningBot{
 		botId:       botId,
 		joinAfter:   joinAfter,
-		games:       sync.Map{}, // todo: Fetch currently open games, but this is not exposed yet.
+		games:       games,
 		sseClient:   client,
 		chatService: chatSvc,
 		gameService: gameSvc,
-	}
+	}, nil
 }
 
 func (b *JoiningBot) Play(ctx context.Context) error {
