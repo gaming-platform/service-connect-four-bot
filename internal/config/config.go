@@ -10,7 +10,7 @@ import (
 type Config struct {
 	Username    string        `env:"APP_USERNAME,required"`
 	Level       int           `env:"APP_LEVEL,required"`
-	JoinAfter   int           `env:"APP_JOIN_AFTER,required"`
+	JoinAfter   time.Duration `env:"APP_JOIN_AFTER,required"`
 	RabbitMqDsn string        `env:"APP_RABBIT_MQ_DSN,required"`
 	NchanSubUrl string        `env:"APP_NCHAN_SUB_URL,required"`
 	RpcTimeout  time.Duration `env:"APP_RPC_TIMEOUT,required"`

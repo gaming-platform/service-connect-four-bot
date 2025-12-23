@@ -24,7 +24,7 @@ func NewResumingBot(
 	client *sse.Client,
 	chatSvc *chat.ChatService,
 	gameSvc *connectfour.GameService,
-) (*ResumingBot, error) {
+) (Bot, error) {
 	gamesPerPage := 100
 	currentPage := 0
 	var games []*connectfourv1.Game

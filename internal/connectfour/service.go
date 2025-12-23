@@ -62,6 +62,35 @@ func (s *GameService) OpenGame(
 	}
 }
 
+func (s *GameService) JoinGame(
+	ctx context.Context,
+	gameId string,
+	playerId string,
+) (*api.ErrorResponse, error) {
+	req := connectfourv1.JoinGame{
+		GameId:   gameId,
+		PlayerId: playerId,
+	}
+	reqBody, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: connectfourv1.JoinGameType, Body: reqBody})
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.Name {
+	case connectfourv1.JoinGameResponseType:
+		return nil, nil
+	case commonv1.ErrorResponseType:
+		return api.NewErrorResponse(resp.Body)
+	default:
+		return nil, errors.New("unknown response")
+	}
+}
+
 func (s *GameService) MakeMove(
 	ctx context.Context,
 	gameId string,
@@ -84,6 +113,34 @@ func (s *GameService) MakeMove(
 		return nil, nil
 	case commonv1.ErrorResponseType:
 		return api.NewErrorResponse(resp.Body)
+	default:
+		return nil, errors.New("unknown response")
+	}
+}
+
+func (s *GameService) GetOpenGames(ctx context.Context, limit int32) (*connectfourv1.GetOpenGamesResponse, error) {
+	req := connectfourv1.GetOpenGames{Limit: limit}
+	reqBody, err := proto.Marshal(&req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.rpcClient.Call(ctx, rpcclient.Message{Name: connectfourv1.GetOpenGamesType, Body: reqBody})
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.Name {
+	case connectfourv1.GetOpenGamesResponseType:
+		var getOpenGamesResp connectfourv1.GetOpenGamesResponse
+		err = proto.Unmarshal(resp.Body, &getOpenGamesResp)
+		if err != nil {
+			return nil, err
+		}
+
+		return &getOpenGamesResp, nil
+	case commonv1.ErrorResponseType:
+		return nil, api.ErrorResponseToError(resp.Body)
 	default:
 		return nil, errors.New("unknown response")
 	}
