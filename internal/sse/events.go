@@ -19,6 +19,8 @@ type ChatAssigned struct {
 }
 
 type PlayerMoved struct {
+	X            int    `json:"x"`
+	Y            int    `json:"y"`
 	NextPlayerId string `json:"nextPlayerId"`
 }
 

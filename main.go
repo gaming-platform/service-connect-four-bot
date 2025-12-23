@@ -11,6 +11,9 @@ import (
 	"github.com/gaming-platform/connect-four-bot/internal/chat"
 	"github.com/gaming-platform/connect-four-bot/internal/config"
 	"github.com/gaming-platform/connect-four-bot/internal/connectfour"
+	"github.com/gaming-platform/connect-four-bot/internal/engine"
+	engine_bruteforce "github.com/gaming-platform/connect-four-bot/internal/engine/marein"
+	engine_random "github.com/gaming-platform/connect-four-bot/internal/engine/random"
 	"github.com/gaming-platform/connect-four-bot/internal/identity"
 	"github.com/gaming-platform/connect-four-bot/internal/rpcclient"
 	"github.com/gaming-platform/connect-four-bot/internal/sse"
@@ -48,18 +51,32 @@ func main() {
 		log.Fatal(err)
 	}
 
-	resumingBot, err := bot.NewResumingBot(ctx, botId, sseClient, chatSvc, gameSvc)
+	var calculateNextMove engine.CalculateNextMove
+	switch cfg.Level {
+	case 0:
+		calculateNextMove = engine_random.CalculateNextMove
+	case 1:
+		calculateNextMove = engine_bruteforce.CreateCalculateNextMove(0)
+	case 2:
+		calculateNextMove = engine_bruteforce.CreateCalculateNextMove(1)
+	case 3:
+		calculateNextMove = engine_bruteforce.CreateCalculateNextMove(3)
+	default:
+		log.Fatalf("invalid level %d", cfg.Level)
+	}
+
+	resumingBot, err := bot.NewResumingBot(ctx, botId, calculateNextMove, sseClient, chatSvc, gameSvc)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	joiningBot, err := bot.NewJoiningBot(ctx, botId, cfg.JoinAfter, sseClient, chatSvc, gameSvc)
+	joiningBot, err := bot.NewJoiningBot(ctx, botId, calculateNextMove, cfg.JoinAfter, sseClient, chatSvc, gameSvc)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	bots := [...]bot.Bot{
-		bot.NewOpeningBot(botId, sseClient, chatSvc, gameSvc),
+		bot.NewOpeningBot(botId, calculateNextMove, sseClient, chatSvc, gameSvc),
 		joiningBot,
 		resumingBot,
 	}

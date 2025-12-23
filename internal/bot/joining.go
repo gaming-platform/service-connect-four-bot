@@ -8,6 +8,7 @@ import (
 
 	"github.com/gaming-platform/connect-four-bot/internal/chat"
 	"github.com/gaming-platform/connect-four-bot/internal/connectfour"
+	"github.com/gaming-platform/connect-four-bot/internal/engine"
 	"github.com/gaming-platform/connect-four-bot/internal/sse"
 	"golang.org/x/sync/errgroup"
 )
@@ -20,17 +21,19 @@ type openGame struct {
 }
 
 type JoiningBot struct {
-	botId       string
-	games       sync.Map
-	joinAfter   time.Duration
-	sseClient   *sse.Client
-	chatService *chat.ChatService
-	gameService *connectfour.GameService
+	botId             string
+	calculateNextMove engine.CalculateNextMove
+	games             sync.Map
+	joinAfter         time.Duration
+	sseClient         *sse.Client
+	chatService       *chat.ChatService
+	gameService       *connectfour.GameService
 }
 
 func NewJoiningBot(
 	ctx context.Context,
 	botId string,
+	calculateNextMove engine.CalculateNextMove,
 	joinAfter time.Duration,
 	client *sse.Client,
 	chatSvc *chat.ChatService,
@@ -58,12 +61,13 @@ func NewJoiningBot(
 	}
 
 	return &JoiningBot{
-		botId:       botId,
-		joinAfter:   joinAfter,
-		games:       games,
-		sseClient:   client,
-		chatService: chatSvc,
-		gameService: gameSvc,
+		botId:             botId,
+		calculateNextMove: calculateNextMove,
+		joinAfter:         joinAfter,
+		games:             games,
+		sseClient:         client,
+		chatService:       chatSvc,
+		gameService:       gameSvc,
 	}, nil
 }
 
@@ -111,11 +115,9 @@ func (b *JoiningBot) joinGames(ctx context.Context, eg *errgroup.Group) error {
 							b.sseClient,
 							b.gameService,
 							b.chatService,
+							b.calculateNextMove,
 							b.botId,
-							gameId,
-							game.width,
-							"",
-							"",
+							connectfour.NewGame(gameId, "", "", game.width, game.height),
 						)
 					})
 
