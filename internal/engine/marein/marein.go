@@ -37,7 +37,7 @@ func calculateNextMove(game *connectfour.Game, maxDepth int) (int, bool) {
 
 	nonLoosingColumns := filterNonLoosingColumns(game, availableColumns)
 	if len(nonLoosingColumns) == 0 {
-		return nonLoosingColumns[0], true
+		return availableColumns[0], true
 	}
 
 	// Prevent opponent from creating a fork.
@@ -78,10 +78,10 @@ func findForkingMove(game *connectfour.Game, columns []int, color int) (int, boo
 		gameClone := game.Clone()
 		gameClone.ForceMove(x, y, color)
 
-		nextcolumns := gameClone.GetAvailableColumns()
-		if firstWinX, ok := findWinningMove(gameClone, nextcolumns, color); ok {
-			nextcolumns = removeColumn(nextcolumns, firstWinX)
-			if _, ok := findWinningMove(gameClone, nextcolumns, color); ok {
+		nextColumns := gameClone.GetAvailableColumns()
+		if firstWinX, ok := findWinningMove(gameClone, nextColumns, color); ok {
+			nextColumns = removeColumn(nextColumns, firstWinX)
+			if _, ok := findWinningMove(gameClone, nextColumns, color); ok {
 				return x, true // Second winning move shows the forking threat.
 			}
 		}
