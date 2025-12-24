@@ -36,12 +36,12 @@ func calculateNextMove(game *connectfour.Game, maxDepth int) (int, bool) {
 	}
 
 	// Prevent opponent from creating a fork.
-	if x, ok := findForkingMove(game, freeColumns, opponent); ok {
+	if x, ok := findForkingMove(game, freeColumns, opponent, maxDepth); ok {
 		return x, true
 	}
 
 	// Create a fork if possible.
-	if x, ok := findForkingMove(game, freeColumns, current); ok {
+	if x, ok := findForkingMove(game, freeColumns, current, maxDepth); ok {
 		return x, true
 	}
 
@@ -89,11 +89,15 @@ func findWinningMove(game *connectfour.Game, freeColumns []int, color int) (int,
 }
 
 // findForkingMove looks for positions that will result in: 2 0 1 1 1 0 2.
-func findForkingMove(game *connectfour.Game, freeColumns []int, color int) (int, bool) {
+func findForkingMove(game *connectfour.Game, freeColumns []int, color int, maxDepth int) (int, bool) {
 	for _, x := range freeColumns {
 		y, _ := game.NextFreeRow(x)
 		gameClone := game.Clone()
 		gameClone.ForceMove(x, y, color)
+
+		if findThreat(gameClone, maxDepth) {
+			continue
+		}
 
 		nextFreeColumns := gameClone.GetFreeColumns()
 		if firstWinX, ok := findWinningMove(gameClone, nextFreeColumns, color); ok {
