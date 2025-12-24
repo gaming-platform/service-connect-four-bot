@@ -70,6 +70,13 @@ func (g *Game) GetCurrentPlayerColors() (int, int) {
 	return 2, 1
 }
 
+func (g *Game) GetOpponentColor(color int) int {
+	if color == 1 {
+		return 2
+	}
+	return 1
+}
+
 func (g *Game) GetFreeColumns() []int {
 	freeColumns := make([]int, 0)
 

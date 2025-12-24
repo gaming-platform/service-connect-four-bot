@@ -44,15 +44,15 @@ func TestPreventWin(t *testing.T) {
 	}
 }
 
-func TestPreventFork(t *testing.T) {
+func TestPreventFork1(t *testing.T) {
 	// 0 X 1 1 0 2 0
 	game := newGameFromColumns([]int{4, 6, 3})
 
 	for i := 0; i < iterations; i++ {
 		x, ok := calculateNextMove(game, 1)
 
-		if (x != 2 && x != 5) || !ok {
-			t.Fatalf("Expected move to be 2 or 5, got %d", x)
+		if x != 2 || !ok {
+			t.Fatalf("Expected move to be 2, got %d", x)
 		}
 	}
 }
@@ -99,7 +99,7 @@ func TestThreatAwareness(t *testing.T) {
 	// 0 0 1 0 0 0 0
 	// 0 0 1 0 0 0 0
 	// 0 0 2 2 2 0 0
-	// 0 0 1 1 2 0 0
+	// 0 X 1 1 2 X 0
 	game := newGameFromColumns([]int{4, 4, 3, 3, 3, 5, 3, 5})
 
 	for i := 0; i < iterations; i++ {

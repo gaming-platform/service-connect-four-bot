@@ -63,7 +63,7 @@ func calculateNextMove(game *connectfour.Game, maxDepth int) (int, bool) {
 		gameClone := game.Clone()
 		gameClone.ApplyMove(x, y)
 
-		if !findThreat(gameClone, maxDepth) {
+		if !findThreat(gameClone, opponent, maxDepth) {
 			return x, true
 		}
 
@@ -95,7 +95,7 @@ func findForkingMove(game *connectfour.Game, freeColumns []int, color int, maxDe
 		gameClone := game.Clone()
 		gameClone.ForceMove(x, y, color)
 
-		if findThreat(gameClone, maxDepth) {
+		if findThreat(gameClone, gameClone.GetOpponentColor(color), maxDepth) {
 			continue
 		}
 
@@ -139,20 +139,19 @@ func findRandomLegalMoveThatPrefersCenter(game *connectfour.Game, freeColumns []
 	return weightedColumns[rand.Intn(len(weightedColumns))]
 }
 
-func findThreat(game *connectfour.Game, depth int) bool {
+func findThreat(game *connectfour.Game, color int, depth int) bool {
 	if depth <= 0 {
 		return false
 	}
 
-	current, _ := game.GetCurrentPlayerColors()
 	freeColumns := game.GetFreeColumns()
 
 	for _, x := range freeColumns {
 		y, _ := game.NextFreeRow(x)
 		gameClone := game.Clone()
-		gameClone.ApplyMove(x, y)
+		gameClone.ForceMove(x, y, color)
 
-		if connectfour.IsWinningMove(gameClone, x, y, current) {
+		if connectfour.IsWinningMove(gameClone, x, y, color) {
 			return true
 		}
 	}
