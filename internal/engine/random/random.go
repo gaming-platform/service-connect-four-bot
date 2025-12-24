@@ -7,7 +7,7 @@ import (
 )
 
 func CalculateNextMove(game *connectfour.Game) (int, bool) {
-	freeColumns := game.GetFreeColumns()
+	freeColumns := game.GetAvailableColumns()
 	if len(freeColumns) == 0 {
 		return 0, false
 	}

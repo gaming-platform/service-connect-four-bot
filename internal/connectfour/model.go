@@ -58,10 +58,6 @@ func (g *Game) ForceMove(x int, y int, color int) {
 	g.moves[g.moveKey(x, y)] = Move{X: x, Y: y, Color: color}
 }
 
-func (g *Game) DeleteMove(x int, y int) {
-	delete(g.moves, g.moveKey(x, y))
-}
-
 // GetCurrentPlayerColors returns the first int as the current player's color, second as the opponent's player color.
 func (g *Game) GetCurrentPlayerColors() (int, int) {
 	if len(g.moves)%2 == 0 {
@@ -70,23 +66,16 @@ func (g *Game) GetCurrentPlayerColors() (int, int) {
 	return 2, 1
 }
 
-func (g *Game) GetOpponentColor(color int) int {
-	if color == 1 {
-		return 2
-	}
-	return 1
-}
-
-func (g *Game) GetFreeColumns() []int {
-	freeColumns := make([]int, 0)
+func (g *Game) GetAvailableColumns() []int {
+	availableColumns := make([]int, 0)
 
 	for x := 1; x <= g.Width; x++ {
 		if _, ok := g.NextFreeRow(x); ok {
-			freeColumns = append(freeColumns, x)
+			availableColumns = append(availableColumns, x)
 		}
 	}
 
-	return freeColumns
+	return availableColumns
 }
 
 func (g *Game) NextFreeRow(x int) (int, bool) {

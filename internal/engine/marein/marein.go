@@ -20,62 +20,45 @@ func CreateCalculateNextMove(maxDepth int) func(game *connectfour.Game) (int, bo
 func calculateNextMove(game *connectfour.Game, maxDepth int) (int, bool) {
 	current, opponent := game.GetCurrentPlayerColors()
 
-	freeColumns := game.GetFreeColumns()
-	if len(freeColumns) == 0 {
+	availableColumns := game.GetAvailableColumns()
+	if len(availableColumns) == 0 {
 		return 0, false
 	}
 
 	// Win if possible.
-	if x, ok := findWinningMove(game, freeColumns, current); ok {
+	if x, ok := findWinningMove(game, availableColumns, current); ok {
 		return x, true
 	}
 
 	// Prevent opponent from winning.
-	if x, ok := findWinningMove(game, freeColumns, opponent); ok {
+	if x, ok := findWinningMove(game, availableColumns, opponent); ok {
 		return x, true
 	}
 
+	nonLoosingColumns := filterNonLoosingColumns(game, availableColumns)
+	if len(nonLoosingColumns) == 0 {
+		return nonLoosingColumns[0], true
+	}
+
 	// Prevent opponent from creating a fork.
-	if x, ok := findForkingMove(game, freeColumns, opponent, maxDepth); ok {
+	if x, ok := findForkingMove(game, nonLoosingColumns, opponent); ok {
 		return x, true
 	}
 
 	// Create a fork if possible.
-	if x, ok := findForkingMove(game, freeColumns, current, maxDepth); ok {
+	if x, ok := findForkingMove(game, nonLoosingColumns, current); ok {
 		return x, true
 	}
 
-	// Prevent forcing winning sequence in the future.
-	if x, ok := findMoveForcingWinningSequence(game, freeColumns, opponent); ok {
-		return x, true
-	}
+	// ideas:
+	// * prefer cluster moves (low weight, probably before random)
+	// * check forcing moves (wins the opponent needs to prevent) and see if those are creating threats.
 
-	// Set up a forcing winning sequence in the future.
-	if x, ok := findMoveForcingWinningSequence(game, freeColumns, current); ok {
-		return x, true
-	}
-
-	// Find a random move that does not allow opponent to win next turn.
-	filteredColumns := freeColumns
-	for {
-		x := findRandomLegalMoveThatPrefersCenter(game, filteredColumns)
-		y, _ := game.NextFreeRow(x)
-		gameClone := game.Clone()
-		gameClone.ApplyMove(x, y)
-
-		if !findThreat(gameClone, opponent, maxDepth) {
-			return x, true
-		}
-
-		filteredColumns = removeColumn(filteredColumns, x)
-		if len(filteredColumns) == 0 { // Threats everywhere, just move somewhere.
-			return freeColumns[0], true
-		}
-	}
+	return findRandomLegalMoveThatPrefersCenter(game, nonLoosingColumns), true
 }
 
-func findWinningMove(game *connectfour.Game, freeColumns []int, color int) (int, bool) {
-	for _, x := range freeColumns {
+func findWinningMove(game *connectfour.Game, columns []int, color int) (int, bool) {
+	for _, x := range columns {
 		y, _ := game.NextFreeRow(x)
 		gameClone := game.Clone()
 		gameClone.ForceMove(x, y, color)
@@ -89,21 +72,17 @@ func findWinningMove(game *connectfour.Game, freeColumns []int, color int) (int,
 }
 
 // findForkingMove looks for positions that will result in: 2 0 1 1 1 0 2.
-func findForkingMove(game *connectfour.Game, freeColumns []int, color int, maxDepth int) (int, bool) {
-	for _, x := range freeColumns {
+func findForkingMove(game *connectfour.Game, columns []int, color int) (int, bool) {
+	for _, x := range columns {
 		y, _ := game.NextFreeRow(x)
 		gameClone := game.Clone()
 		gameClone.ForceMove(x, y, color)
 
-		if findThreat(gameClone, gameClone.GetOpponentColor(color), maxDepth) {
-			continue
-		}
-
-		nextFreeColumns := gameClone.GetFreeColumns()
-		if firstWinX, ok := findWinningMove(gameClone, nextFreeColumns, color); ok {
-			nextFreeColumns = removeColumn(nextFreeColumns, firstWinX)
-			if _, ok := findWinningMove(gameClone, nextFreeColumns, color); ok {
-				return x, true // Second winning move shows the threat.
+		nextcolumns := gameClone.GetAvailableColumns()
+		if firstWinX, ok := findWinningMove(gameClone, nextcolumns, color); ok {
+			nextcolumns = removeColumn(nextcolumns, firstWinX)
+			if _, ok := findWinningMove(gameClone, nextcolumns, color); ok {
+				return x, true // Second winning move shows the forking threat.
 			}
 		}
 	}
@@ -111,18 +90,10 @@ func findForkingMove(game *connectfour.Game, freeColumns []int, color int, maxDe
 	return 0, false
 }
 
-// findMoveForcingWinningSequence looks for positions that will result in (simplified):
-// 2 2 0 1 1 1 0  <- 1 is winning nevertheless.
-// 2 2 0 1 1 1 0  <- 2 is forced to prevent 1 from winning.
-// 2 2 0 2 1 1 0  <- 1 can now move here.
-func findMoveForcingWinningSequence(game *connectfour.Game, freeColumns []int, color int) (int, bool) {
-	return 0, false
-}
-
-func findRandomLegalMoveThatPrefersCenter(game *connectfour.Game, freeColumns []int) int {
+func findRandomLegalMoveThatPrefersCenter(game *connectfour.Game, columns []int) int {
 	center := math.Ceil(float64(game.Width) / 2)
 	weightedColumns := make([]int, 0)
-	for _, y := range freeColumns {
+	for _, y := range columns {
 		// 4 - abs(4 - col 1) = wgt 1
 		// 4 - abs(4 - col 2) = wgt 2
 		// 4 - abs(4 - col 3) = wgt 3
@@ -139,19 +110,36 @@ func findRandomLegalMoveThatPrefersCenter(game *connectfour.Game, freeColumns []
 	return weightedColumns[rand.Intn(len(weightedColumns))]
 }
 
-func findThreat(game *connectfour.Game, color int, depth int) bool {
+func filterNonLoosingColumns(game *connectfour.Game, columns []int) []int {
+	nonLoosingColumns := make([]int, 0)
+
+	for _, x := range columns {
+		y, _ := game.NextFreeRow(x)
+		gameClone := game.Clone()
+		gameClone.ApplyMove(x, y)
+
+		if !findThreat(gameClone, 1) {
+			nonLoosingColumns = append(nonLoosingColumns, x)
+		}
+	}
+
+	return nonLoosingColumns
+}
+
+func findThreat(game *connectfour.Game, depth int) bool {
 	if depth <= 0 {
 		return false
 	}
 
-	freeColumns := game.GetFreeColumns()
+	current, _ := game.GetCurrentPlayerColors()
+	availableColumns := game.GetAvailableColumns()
 
-	for _, x := range freeColumns {
+	for _, x := range availableColumns {
 		y, _ := game.NextFreeRow(x)
 		gameClone := game.Clone()
-		gameClone.ForceMove(x, y, color)
+		gameClone.ApplyMove(x, y)
 
-		if connectfour.IsWinningMove(gameClone, x, y, color) {
+		if connectfour.IsWinningMove(gameClone, x, y, current) {
 			return true
 		}
 	}

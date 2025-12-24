@@ -75,6 +75,24 @@ func TestPreventFork2(t *testing.T) {
 	}
 }
 
+func TestPreventFork3(t *testing.T) {
+	// 0 0 0 2 0 0 0
+	// 0 0 0 1 0 0 0
+	// 0 0 0 2 2 0 0
+	// 0 0 X 1 1 Y 0  <- Y is how to tackle this fork, because X leads to immediate loss.
+	// 0 0 1 2 1 1 0
+	// 0 0 2 1 2 1 2
+	game := newGameFromColumns([]int{4, 4, 4, 4, 4, 4, 6, 5, 5, 3, 3, 7, 5, 5, 6})
+
+	for i := 0; i < iterations; i++ {
+		x, ok := calculateNextMove(game, 1)
+
+		if x != 6 || !ok {
+			t.Fatalf("Expected move to be 6, got %d", x)
+		}
+	}
+}
+
 func TestDoNotCreateForkIfItLeadsToLoss(t *testing.T) {
 	// 0 0 1 2 0 0 0
 	// 0 0 2 1 1 0 0
