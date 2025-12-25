@@ -129,24 +129,39 @@ func TestPreventFork3(t *testing.T) {
 	}
 }
 
-// todo: solution not implemented yet.
-//func TestPreventFork4(t *testing.T) {
-//	// 0 0 0 2 0 0 0
-//	// 0 0 0 2 0 0 0
-//	// 0 0 0 1 0 0 0
-//	// 0 0 1 2 1 0 0
-//	// 0 0 1 2 2 0 0
-//	// 1 0 2 1 1 0 X
-//	game := newGameFromColumns([]int{4, 4, 5, 3, 3, 4, 4, 4, 3, 4, 1, 5, 5})
-//
-//	for i := 0; i < iterations; i++ {
-//		x, ok := calculateNextMove(game, 1)
-//
-//		if x != 7 || !ok {
-//			t.Fatalf("Expected move to be 7, got %d", x)
-//		}
-//	}
-//}
+func TestForkingVertically1(t *testing.T) {
+	// 0 0 0 2 0 0 0
+	// 0 0 0 2 0 0 0
+	// 0 0 0 1 0 0 0
+	// 0 0 1 2 1 0 0
+	// 0 0 1 2 2 0 0
+	// 1 0 2 1 1 0 X
+	preventingGame := newGameFromColumns([]int{4, 4, 5, 3, 3, 4, 4, 4, 3, 4, 1, 5, 5})
+
+	for i := 0; i < iterations; i++ {
+		x, ok := calculateNextMove(preventingGame, 1)
+
+		if x != 7 || !ok {
+			t.Fatalf("Expected move to be 7, got %d", x)
+		}
+	}
+
+	// 0 0 0 2 0 0 0
+	// 0 0 0 2 0 0 0
+	// 0 0 0 1 0 0 0
+	// 0 0 1 2 1 0 0
+	// 2 0 1 2 2 0 0
+	// 1 0 2 1 1 0 X
+	creatingGame := newGameFromColumns([]int{4, 4, 5, 3, 3, 4, 4, 4, 3, 4, 1, 5, 5, 1})
+
+	for i := 0; i < iterations; i++ {
+		x, ok := calculateNextMove(creatingGame, 1)
+
+		if x != 7 || !ok {
+			t.Fatalf("Expected move to be 7, got %d", x)
+		}
+	}
+}
 
 func TestDoNotCreateForkIfItLeadsToLoss(t *testing.T) {
 	// 0 0 1 2 0 0 0

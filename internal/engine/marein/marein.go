@@ -79,10 +79,28 @@ func findForkingMove(game *connectfour.Game, columns []int, color int) (int, boo
 		gameClone.ForceMove(x, y, color)
 
 		nextColumns := gameClone.GetAvailableColumns()
+
+		// Test horizontally.
 		if firstWinX, ok := findWinningMove(gameClone, nextColumns, color); ok {
-			nextColumns = removeColumn(nextColumns, firstWinX)
-			if _, ok := findWinningMove(gameClone, nextColumns, color); ok {
+			if _, ok := findWinningMove(gameClone, removeColumn(nextColumns, firstWinX), color); ok {
 				return x, true // Second winning move shows the forking threat.
+			}
+		}
+
+		// Test vertically.
+		for _, verticalX := range nextColumns {
+			verticalY, _ := gameClone.NextFreeRow(verticalX)
+			verticalGameClone := gameClone.Clone()
+			verticalGameClone.ForceMove(verticalX, verticalY, color)
+
+			if connectfour.IsWinningMove(verticalGameClone, verticalX, verticalY, color) &&
+				game.IsInBounds(verticalX, verticalY-1) &&
+				!game.HasMoveAt(verticalX, verticalY-1) {
+				verticalGameClone := gameClone.Clone() // Clone again to prevent checking vertical wins.
+				verticalGameClone.ForceMove(verticalX, verticalY-1, color)
+				if connectfour.IsWinningMove(verticalGameClone, verticalX, verticalY-1, color) {
+					return x, true // Second winning move shows the forking threat.
+				}
 			}
 		}
 	}

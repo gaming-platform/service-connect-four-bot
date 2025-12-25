@@ -54,8 +54,17 @@ func (g *Game) GetMoveAt(x int, y int) (Move, bool) {
 	return mv, ok
 }
 
+func (g *Game) HasMoveAt(x int, y int) bool {
+	_, ok := g.moves[g.moveKey(x, y)]
+	return ok
+}
+
 func (g *Game) ForceMove(x int, y int, color int) {
 	g.moves[g.moveKey(x, y)] = Move{X: x, Y: y, Color: color}
+}
+
+func (g *Game) IsInBounds(x int, y int) bool {
+	return x >= 1 && x <= g.Width && y >= 1 && y <= g.Height
 }
 
 // GetCurrentPlayerColors returns the first int as the current player's color, second as the opponent's player color.
