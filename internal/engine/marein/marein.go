@@ -68,6 +68,7 @@ func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 	// ideas:
 	// * prefer moves creating clusters (low weight, probably before random)
 	// * check forcing moves (wins the opponent needs to prevent) and see if those are creating threats.
+	// * calculate forks that'll force a win, or prevent a loss in the future.
 
 	return findRandomLegalMoveThatPrefersCenter(game, nonLosingColumns), true
 }

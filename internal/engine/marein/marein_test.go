@@ -153,14 +153,25 @@ func TestBoardCases(t *testing.T) {
 					0 1 2 1 2 2 2`,
 			allowed: []int{1, 2, 5, 6, 7},
 		},
-		//"ForcingMoveLeadsToFork": {
-		//	// X forces Y, then X can create a fork.
+		//"ForcingMoveLeadsToFork1": {
+		//	// X forces Y, then Z can create a fork.
 		//	board: `0 0 0 1 2 0 0
 		//			0 0 0 1 1 0 0
 		//			0 0 0 1 1 2 1
 		//			0 0 0 2 2 1 2
 		//			0 Z 1 1 2 2 2
 		//			Y X 1 1 2 2 2`,
+		//	allowed: []int{2},
+		//},
+		//"ForcingMoveLeadsToFork2": {
+		//	// X forces Y, then Z creates a future fork.
+		//	// A, B, C, D shows an example continuation.
+		//	board: `0 0 2 1 2 0 0
+		//			0 0 1 1 2 A D
+		//			0 0 2 1 1 Z C
+		//			0 0 2 2 1 X B
+		//			0 0 1 1 1 2 Y
+		//			2 0 2 1 2 1 2`,
 		//	allowed: []int{2},
 		//},
 	}
