@@ -7,10 +7,10 @@ import (
 )
 
 func CalculateNextMove(game *connectfour.Game) (int, bool) {
-	freeColumns := game.GetAvailableColumns()
-	if len(freeColumns) == 0 {
+	availableColumns := game.GetAvailableColumns()
+	if len(availableColumns) == 0 {
 		return 0, false
 	}
 
-	return freeColumns[rand.Intn(len(freeColumns))], true
+	return availableColumns[rand.Intn(len(availableColumns))], true
 }

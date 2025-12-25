@@ -172,7 +172,7 @@ func TestBoardCases(t *testing.T) {
 		//			0 0 2 2 1 X B
 		//			0 0 1 1 1 2 Y
 		//			2 0 2 1 2 1 2`,
-		//	allowed: []int{2},
+		//	allowed: []int{6},
 		//},
 	}
 

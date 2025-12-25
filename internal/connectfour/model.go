@@ -67,7 +67,7 @@ func (g *Game) IsInBounds(x int, y int) bool {
 	return x >= 1 && x <= g.Width && y >= 1 && y <= g.Height
 }
 
-// GetCurrentPlayerColors returns the first int as the current player's color, second as the opponent's player color.
+// GetCurrentPlayerColors returns the current player's color as the first integer and the opponent's color as the second.
 func (g *Game) GetCurrentPlayerColors() (int, int) {
 	if len(g.moves)%2 == 0 {
 		return 1, 2
