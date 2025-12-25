@@ -1,210 +1,176 @@
 package engine_marein
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/gaming-platform/connect-four-bot/internal/connectfour"
 )
 
-var iterations = 1000
+var iterationsPerCase = 1000
 
-func TestWinIfPossible(t *testing.T) {
-	// 0 0 0 0 0 0 0
-	// 0 0 0 0 0 0 0
-	// X 0 0 0 0 0 0
-	// 1 0 0 0 0 0 0
-	// 1 0 0 0 0 0 0
-	// 1 2 2 2 0 0 0
-	game := newGameFromColumns([]int{1, 2, 1, 3, 1, 4})
+type boardCase struct {
+	board   string
+	allowed []int
+}
 
-	for i := 0; i < iterations; i++ {
+func TestBoardCases(t *testing.T) {
+	boardCases := map[string]boardCase{
+		"WinIfPossible": {
+			board: `0 0 0 0 0 0 0
+					0 0 0 0 0 0 0
+					0 0 0 0 0 0 0
+					1 0 0 0 0 0 0
+					1 0 0 0 0 0 0
+					1 2 2 2 0 0 0`,
+			allowed: []int{1},
+		},
+		"PreventWin": {
+			board: `0 0 0 0 0 0 0
+					1 0 0 0 0 0 0
+					2 0 0 0 0 0 0
+					1 0 0 0 0 0 0
+					1 0 0 0 0 0 0
+					1 2 2 2 0 0 0`,
+			allowed: []int{5},
+		},
+		"IgnoreLosingColumns": {
+			board: `0 0 0 0 0 0 0
+					0 0 0 0 0 0 0
+					0 0 1 0 0 0 0
+					0 0 1 0 0 0 0
+					0 0 2 2 2 0 0
+					0 0 1 1 2 0 0`,
+			allowed: []int{1, 3, 4, 5, 7},
+		},
+		"UseFirstWhenOnlyOptionIsLosing": {
+			board: `0 1 2 2 2 1 0
+					0 2 1 2 2 2 0
+					0 2 2 2 1 1 0
+					0 1 1 1 2 1 0
+					0 2 1 2 1 1 1
+					2 2 1 1 1 2 1`,
+			allowed: []int{1},
+		},
+		"CreateHorizontalFork1": {
+			board:   `0 X 1 1 0 2 2`,
+			allowed: []int{2},
+		},
+		"PreventHorizontalFork1": {
+			board:   `0 X 1 1 0 2 0`,
+			allowed: []int{2},
+		},
+		"CreateHorizontalFork2": {
+			board: `0 0 0 0 0 0 0
+					0 0 0 0 0 0 2
+					0 X 2 0 0 0 1
+					0 1 1 0 0 0 2
+					0 1 1 1 0 2 2
+					0 2 1 1 0 2 2`,
+			allowed: []int{2},
+		},
+		"PreventHorizontalFork2": {
+			board: `0 0 0 0 0 0 0
+					0 0 0 0 0 0 0
+					0 X 2 0 0 2 1
+					0 1 1 0 0 1 2
+					0 1 1 1 0 2 2
+					0 2 1 1 0 2 2`,
+			allowed: []int{2},
+		},
+		"CreateHorizontalFork3": {
+			board: `0 0 0 0 0 0 0
+					0 0 0 1 0 0 0
+					0 0 0 2 2 0 0
+					0 0 X 1 1 0 0
+					0 0 1 2 1 1 0
+					0 0 2 1 2 1 2`,
+			allowed: []int{3},
+		},
+		"PreventHorizontalFork3": {
+			// Y would prevent the fork, but would lose immediately.
+			board: `0 0 0 2 0 0 0
+					0 0 0 1 0 0 0
+					0 0 0 2 2 0 0
+					0 0 Y 1 1 X 0
+					0 0 1 2 1 1 0
+					0 0 2 1 2 1 2`,
+			allowed: []int{6},
+		},
+		"CreateVerticalFork1": {
+			board: `0 0 0 2 0 0 0
+					0 0 0 2 0 0 0
+					0 0 0 1 0 0 0
+					0 0 1 2 1 0 0
+					2 0 1 2 2 0 0
+					1 0 2 1 1 0 X`,
+			allowed: []int{7},
+		},
+		"PreventVerticalFork1": {
+			board: `0 0 0 2 0 0 0
+					0 0 0 2 0 0 0
+					0 0 0 1 0 0 0
+					0 0 1 2 1 0 0
+					0 0 1 2 2 0 0
+					1 0 2 1 1 0 X`,
+			allowed: []int{7},
+		},
+		"DoNotCreateForkIfItLeadsToLoss": {
+			board: `0 0 1 2 0 0 0
+					0 0 2 1 1 0 0
+					0 0 1 1 1 0 0
+					0 X 2 1 2 0 0
+					0 2 1 2 1 0 0
+					0 2 2 1 2 0 0`,
+			allowed: []int{1, 5, 6, 7},
+		},
+	}
+
+	for name, c := range boardCases {
+		t.Run(name, func(t *testing.T) { runBoardCase(t, c) })
+	}
+}
+
+func runBoardCase(t *testing.T, c boardCase) {
+	t.Helper()
+	for i := 0; i < iterationsPerCase; i++ {
+		game := newGameFromAscii(c.board)
 		x, ok := calculateNextMove(game, NewOptions(100))
 
-		if x != 1 || !ok {
-			t.Fatalf("Expected move to be 1, got %d", x)
+		found := false
+		for _, allowedX := range c.allowed {
+			if x == allowedX && ok {
+				found = true
+			}
+		}
+
+		if !found {
+			t.Fatalf("iteration %d returned %d, %v; allowed one of %v", i+1, x, ok, c.allowed)
 		}
 	}
 }
 
-func TestPreventWin(t *testing.T) {
-	// 0 0 0 0 0 0 0
-	// 1 0 0 0 0 0 0
-	// 2 0 0 0 0 0 0
-	// 1 0 0 0 0 0 0
-	// 1 0 0 0 0 0 0
-	// 1 2 2 2 X 0 0
-	game := newGameFromColumns([]int{1, 2, 1, 3, 1, 1, 1, 4})
-
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(game, NewOptions(100))
-
-		if x != 5 || !ok {
-			t.Fatalf("Expected move to be 5, got %d", x)
-		}
-	}
-}
-
-func TestThreatAwareness(t *testing.T) {
-	// 0 0 0 0 0 0 0
-	// 0 0 0 0 0 0 0
-	// 0 0 1 0 0 0 0
-	// 0 0 1 0 0 0 0
-	// 0 0 2 2 2 0 0
-	// 0 X 1 1 2 X 0
-	game := newGameFromColumns([]int{4, 4, 3, 3, 3, 5, 3, 5})
-
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(game, NewOptions(100))
-
-		if x == 2 || x == 6 || !ok {
-			t.Fatalf("Expected move to be anything except 2 or 6, got %d", x)
-		}
-	}
-}
-
-func TestOnlyLoosingMoves(t *testing.T) {
-	// 0 1 2 2 2 1 0
-	// 0 2 1 2 2 2 0
-	// 0 2 2 2 1 1 0
-	// 0 1 1 1 2 1 0
-	// 0 2 1 2 1 1 1
-	// 2 2 1 1 1 2 1
-	game := newGameFromColumns([]int{4, 2, 3, 4, 4, 4, 3, 4, 5, 6, 5, 4, 3, 3, 6, 5, 5, 5, 6, 5, 6, 6, 3, 3, 6, 2, 2, 1, 7, 2, 7, 2, 2})
-
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(game, NewOptions(100))
-
-		if x != 1 || !ok {
-			t.Fatalf("Expected move to be between 1, got %d", x)
-		}
-	}
-}
-
-func TestPreventFork1(t *testing.T) {
-	// 0 X 1 1 0 2 0
-	game := newGameFromColumns([]int{4, 6, 3})
-
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(game, NewOptions(100))
-
-		if x != 2 || !ok {
-			t.Fatalf("Expected move to be 2, got %d", x)
-		}
-	}
-}
-
-func TestPreventFork2(t *testing.T) {
-	// 0 0 0 0 0 0 0
-	// 0 0 0 0 0 0 0
-	// 0 X 2 0 0 2 1
-	// 0 1 1 0 0 1 2
-	// 0 1 1 1 0 2 2
-	// 0 2 1 1 0 2 2
-	game := newGameFromColumns([]int{4, 6, 3, 2, 2, 6, 6, 7, 3, 7, 4, 7, 7, 6, 3, 3, 2})
-
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(game, NewOptions(100))
-
-		if x != 2 || !ok {
-			t.Fatalf("Expected move to be 2, got %d", x)
-		}
-	}
-}
-
-func TestPreventFork3(t *testing.T) {
-	// 0 0 0 2 0 0 0
-	// 0 0 0 1 0 0 0
-	// 0 0 0 2 2 0 0
-	// 0 0 X 1 1 Y 0  <- Y is how to tackle this fork, because X leads to immediate loss.
-	// 0 0 1 2 1 1 0
-	// 0 0 2 1 2 1 2
-	game := newGameFromColumns([]int{4, 4, 4, 4, 4, 4, 6, 5, 5, 3, 3, 7, 5, 5, 6})
-
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(game, NewOptions(100))
-
-		if x != 6 || !ok {
-			t.Fatalf("Expected move to be 6, got %d", x)
-		}
-	}
-}
-
-func TestForkingVertically1(t *testing.T) {
-	// 0 0 0 2 0 0 0
-	// 0 0 0 2 0 0 0
-	// 0 0 0 1 0 0 0
-	// 0 0 1 2 1 0 0
-	// 0 0 1 2 2 0 0
-	// 1 0 2 1 1 0 X
-	preventingGame := newGameFromColumns([]int{4, 4, 5, 3, 3, 4, 4, 4, 3, 4, 1, 5, 5})
-
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(preventingGame, NewOptions(100))
-
-		if x != 7 || !ok {
-			t.Fatalf("Expected move to be 7, got %d", x)
-		}
+func newGameFromAscii(board string) *connectfour.Game {
+	lines := make([]string, 0)
+	for _, l := range strings.Split(strings.TrimSpace(board), "\n") {
+		lines = append(lines, strings.TrimSpace(l))
 	}
 
-	// 0 0 0 2 0 0 0
-	// 0 0 0 2 0 0 0
-	// 0 0 0 1 0 0 0
-	// 0 0 1 2 1 0 0
-	// 2 0 1 2 2 0 0
-	// 1 0 2 1 1 0 X
-	creatingGame := newGameFromColumns([]int{4, 4, 5, 3, 3, 4, 4, 4, 3, 4, 1, 5, 5, 1})
+	fields := strings.Fields(lines[0])
 
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(creatingGame, NewOptions(100))
+	game := connectfour.NewGame("", "", "", len(fields), len(lines))
 
-		if x != 7 || !ok {
-			t.Fatalf("Expected move to be 7, got %d", x)
+	for y, line := range lines {
+		fields := strings.Fields(line)
+		for x, color := range fields {
+			color, err := strconv.Atoi(color)
+			if err != nil || color == 0 {
+				continue
+			}
+
+			game.ForceMove(x+1, y+1, color)
 		}
-	}
-}
-
-func TestDoNotCreateForkIfItLeadsToLoss(t *testing.T) {
-	// 0 0 1 2 0 0 0
-	// 0 0 2 1 1 0 0
-	// 0 0 1 1 1 0 0
-	// 0 X 2 1 2 0 0
-	// 0 2 1 2 1 0 0
-	// 0 2 2 1 2 0 0
-	game := newGameFromColumns([]int{4, 4, 4, 3, 4, 5, 4, 4, 5, 5, 5, 6, 3, 2, 5, 3, 3, 3, 3, 2})
-
-	for i := 0; i < iterations; i++ {
-		x, ok := calculateNextMove(game, NewOptions(100))
-
-		if (x != 1 && x != 5 && x != 6 && x != 7) || !ok {
-			t.Fatalf("Expected move to be 1 or 5 or 6 or 7, got %d", x)
-		}
-	}
-}
-
-// todo: solution not implemented yet.
-//func TestForcingMoveLeadsToFork(t *testing.T) {
-//	// 0 0 0 1 2 0 0
-//	// 0 0 0 1 1 0 0
-//	// 0 0 0 1 1 2 1
-//	// 0 0 0 2 2 1 2
-//	// 0 0 1 1 2 2 2
-//	// 0 1 1 1 2 2 2
-//	game := newGameFromColumns([]int{4, 5, 4, 5, 3, 5, 5, 4, 4, 6, 3, 6, 6, 7, 4, 7, 5, 7, 7, 6, 4, 5})
-//
-//	for i := 0; i < iterations; i++ {
-//		x, ok := calculateNextMove(game, 1)
-//
-//		if x != 2 || !ok {
-//			t.Fatalf("Expected move to be 2, got %d", x)
-//		}
-//	}
-//}
-
-func newGameFromColumns(columns []int) *connectfour.Game {
-	game := connectfour.NewGame("", "", "", 7, 6)
-	for _, x := range columns {
-		y, _ := game.NextFreeRow(x)
-		game.ApplyMove(x, y)
 	}
 
 	return game

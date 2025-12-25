@@ -48,19 +48,19 @@ func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 		return x, true
 	}
 
-	nonLoosingColumns := filterNonLoosingColumns(game, availableColumns)
-	if len(nonLoosingColumns) == 0 {
+	nonLosingColumns := filterNonLosingColumns(game, availableColumns)
+	if len(nonLosingColumns) == 0 {
 		return availableColumns[0], true
 	}
 
 	// Prevent opponent from creating a fork.
-	if x, ok := findForkingMove(game, nonLoosingColumns, opponent); ok {
+	if x, ok := findForkingMove(game, nonLosingColumns, opponent); ok {
 		return x, true
 	}
 
 	// Create a fork if possible.
 	if rand.Intn(100) < options.ForkCreationProbability {
-		if x, ok := findForkingMove(game, nonLoosingColumns, current); ok {
+		if x, ok := findForkingMove(game, nonLosingColumns, current); ok {
 			return x, true
 		}
 	}
@@ -69,7 +69,7 @@ func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 	// * prefer cluster moves (low weight, probably before random)
 	// * check forcing moves (wins the opponent needs to prevent) and see if those are creating threats.
 
-	return findRandomLegalMoveThatPrefersCenter(game, nonLoosingColumns), true
+	return findRandomLegalMoveThatPrefersCenter(game, nonLosingColumns), true
 }
 
 func findWinningMove(game *connectfour.Game, columns []int, color int) (int, bool) {
@@ -159,8 +159,8 @@ func canOpponentWin(game *connectfour.Game) bool {
 	return false
 }
 
-func filterNonLoosingColumns(game *connectfour.Game, columns []int) []int {
-	nonLoosingColumns := make([]int, 0)
+func filterNonLosingColumns(game *connectfour.Game, columns []int) []int {
+	nonLosingColumns := make([]int, 0)
 
 	for _, x := range columns {
 		y, _ := game.NextFreeRow(x)
@@ -168,11 +168,11 @@ func filterNonLoosingColumns(game *connectfour.Game, columns []int) []int {
 		gameClone.ApplyMove(x, y)
 
 		if !canOpponentWin(gameClone) {
-			nonLoosingColumns = append(nonLoosingColumns, x)
+			nonLosingColumns = append(nonLosingColumns, x)
 		}
 	}
 
-	return nonLoosingColumns
+	return nonLosingColumns
 }
 
 func removeColumn(columns []int, column int) []int {
