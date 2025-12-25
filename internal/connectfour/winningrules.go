@@ -1,14 +1,14 @@
 package connectfour
 
 func IsWinningMove(g *Game, x, y, color int) bool {
-	dirs := [][2]int{
+	directions := [][2]int{
 		{1, 0},  // horizontal
 		{0, 1},  // vertical
 		{1, 1},  // diagonal \
 		{1, -1}, // diagonal /
 	}
 
-	for _, d := range dirs {
+	for _, d := range directions {
 		count := 1
 		count += countDirection(g, x, y, d[0], d[1], color)
 		count += countDirection(g, x, y, -d[0], -d[1], color)

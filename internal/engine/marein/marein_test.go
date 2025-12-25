@@ -116,7 +116,26 @@ func TestBoardCases(t *testing.T) {
 					1 0 2 1 1 0 X`,
 			allowed: []int{7},
 		},
-		"DoNotCreateForkIfItLeadsToLoss": {
+		"CreateVerticalFork2": {
+			board: `0 0 0 1 2 0 0
+					0 0 1 2 2 0 0
+					0 0 2 2 2 0 0
+					0 0 1 2 1 0 0
+					0 X 1 1 2 1 0
+					2 1 1 1 2 1 0`,
+			allowed: []int{2},
+		},
+		"CreateVerticalFork3": {
+			// Y would be a fork, but would lose immediately.
+			board: `0 0 0 2 0 0 0
+					0 0 2 2 2 0 0
+					0 0 2 2 2 0 0
+					0 Y 1 2 1 0 0
+					X 1 2 1 1 0 0
+					1 1 2 1 1 0 0`,
+			allowed: []int{1},
+		},
+		"DoNotCreateLosingForks1": {
 			board: `0 0 1 2 0 0 0
 					0 0 2 1 1 0 0
 					0 0 1 1 1 0 0
@@ -124,6 +143,15 @@ func TestBoardCases(t *testing.T) {
 					0 2 1 2 1 0 0
 					0 2 2 1 2 0 0`,
 			allowed: []int{1, 5, 6, 7},
+		},
+		"DoNotCreateLosingForks2": {
+			board: `0 0 0 1 0 0 0
+					0 0 0 1 0 0 0
+					0 0 0 1 2 0 0
+					0 2 X 2 1 0 0
+					0 1 2 1 2 1 0
+					0 1 2 1 2 2 2`,
+			allowed: []int{1, 2, 5, 6, 7},
 		},
 	}
 
