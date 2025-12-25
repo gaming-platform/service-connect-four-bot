@@ -8,16 +8,29 @@ import (
 )
 
 // A custom implementation with some heuristics.
-// No big algorithms, favors readability over efficiency, just for fun.
-// It currently ignores depth > 1.
+// The design goal is to create an engine that plays reasonably well without
+// solving the game completely (because Connect Four is a solved game).
+// Favors readability over efficiency.
 
-func CreateCalculateNextMove(maxDepth int) func(game *connectfour.Game) (int, bool) {
-	return func(game *connectfour.Game) (int, bool) {
-		return calculateNextMove(game, maxDepth)
+type Options struct {
+	ForkCreationProbability int
+}
+
+func NewOptions(
+	forkCreationProbability int,
+) Options {
+	return Options{
+		ForkCreationProbability: forkCreationProbability,
 	}
 }
 
-func calculateNextMove(game *connectfour.Game, maxDepth int) (int, bool) {
+func CreateCalculateNextMove(options Options) func(game *connectfour.Game) (int, bool) {
+	return func(game *connectfour.Game) (int, bool) {
+		return calculateNextMove(game, options)
+	}
+}
+
+func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 	current, opponent := game.GetCurrentPlayerColors()
 
 	availableColumns := game.GetAvailableColumns()
@@ -46,8 +59,10 @@ func calculateNextMove(game *connectfour.Game, maxDepth int) (int, bool) {
 	}
 
 	// Create a fork if possible.
-	if x, ok := findForkingMove(game, nonLoosingColumns, current); ok {
-		return x, true
+	if rand.Intn(100) < options.ForkCreationProbability {
+		if x, ok := findForkingMove(game, nonLoosingColumns, current); ok {
+			return x, true
+		}
 	}
 
 	// ideas:
@@ -71,7 +86,6 @@ func findWinningMove(game *connectfour.Game, columns []int, color int) (int, boo
 	return 0, false
 }
 
-// findForkingMove looks for positions that will result in: 2 0 1 1 1 0 2.
 func findForkingMove(game *connectfour.Game, columns []int, color int) (int, bool) {
 	for _, x := range columns {
 		y, _ := game.NextFreeRow(x)
@@ -128,27 +142,7 @@ func findRandomLegalMoveThatPrefersCenter(game *connectfour.Game, columns []int)
 	return weightedColumns[rand.Intn(len(weightedColumns))]
 }
 
-func filterNonLoosingColumns(game *connectfour.Game, columns []int) []int {
-	nonLoosingColumns := make([]int, 0)
-
-	for _, x := range columns {
-		y, _ := game.NextFreeRow(x)
-		gameClone := game.Clone()
-		gameClone.ApplyMove(x, y)
-
-		if !findThreat(gameClone, 1) {
-			nonLoosingColumns = append(nonLoosingColumns, x)
-		}
-	}
-
-	return nonLoosingColumns
-}
-
-func findThreat(game *connectfour.Game, depth int) bool {
-	if depth <= 0 {
-		return false
-	}
-
+func canOpponentWin(game *connectfour.Game) bool {
 	current, _ := game.GetCurrentPlayerColors()
 	availableColumns := game.GetAvailableColumns()
 
@@ -163,6 +157,22 @@ func findThreat(game *connectfour.Game, depth int) bool {
 	}
 
 	return false
+}
+
+func filterNonLoosingColumns(game *connectfour.Game, columns []int) []int {
+	nonLoosingColumns := make([]int, 0)
+
+	for _, x := range columns {
+		y, _ := game.NextFreeRow(x)
+		gameClone := game.Clone()
+		gameClone.ApplyMove(x, y)
+
+		if !canOpponentWin(gameClone) {
+			nonLoosingColumns = append(nonLoosingColumns, x)
+		}
+	}
+
+	return nonLoosingColumns
 }
 
 func removeColumn(columns []int, column int) []int {

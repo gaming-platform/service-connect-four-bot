@@ -12,7 +12,7 @@ import (
 	"github.com/gaming-platform/connect-four-bot/internal/config"
 	"github.com/gaming-platform/connect-four-bot/internal/connectfour"
 	"github.com/gaming-platform/connect-four-bot/internal/engine"
-	engine_bruteforce "github.com/gaming-platform/connect-four-bot/internal/engine/marein"
+	engine_marein "github.com/gaming-platform/connect-four-bot/internal/engine/marein"
 	engine_random "github.com/gaming-platform/connect-four-bot/internal/engine/random"
 	"github.com/gaming-platform/connect-four-bot/internal/identity"
 	"github.com/gaming-platform/connect-four-bot/internal/rpcclient"
@@ -56,11 +56,13 @@ func main() {
 	case 0:
 		calculateNextMove = engine_random.CalculateNextMove
 	case 1:
-		calculateNextMove = engine_bruteforce.CreateCalculateNextMove(0)
+		calculateNextMove = engine_marein.CreateCalculateNextMove(engine_marein.Options{
+			ForkCreationProbability: 75,
+		})
 	case 2:
-		calculateNextMove = engine_bruteforce.CreateCalculateNextMove(1)
-	case 3:
-		calculateNextMove = engine_bruteforce.CreateCalculateNextMove(3)
+		calculateNextMove = engine_marein.CreateCalculateNextMove(engine_marein.Options{
+			ForkCreationProbability: 100,
+		})
 	default:
 		log.Fatalf("invalid level %d", cfg.Level)
 	}
