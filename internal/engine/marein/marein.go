@@ -53,16 +53,16 @@ func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 		return availableColumns[0], true
 	}
 
-	// Prevent opponent from creating a fork.
-	if x, ok := findForkingMove(game, nonLosingColumns, opponent); ok {
-		return x, true
-	}
-
 	// Create a fork if possible.
 	if rand.Intn(100) < options.ForkCreationProbability {
 		if x, ok := findForkingMove(game, nonLosingColumns, current); ok {
 			return x, true
 		}
+	}
+
+	// Prevent opponent from creating a fork.
+	if x, ok := findForkingMove(game, nonLosingColumns, opponent); ok {
+		return x, true
 	}
 
 	// ideas:
