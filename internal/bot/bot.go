@@ -2,10 +2,10 @@ package bot
 
 import (
 	"context"
-	"math/rand"
 
 	"github.com/gaming-platform/connect-four-bot/internal/chat"
 	"github.com/gaming-platform/connect-four-bot/internal/connectfour"
+	"github.com/gaming-platform/connect-four-bot/internal/engine"
 	"github.com/gaming-platform/connect-four-bot/internal/sse"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -25,24 +25,22 @@ func playThrough(
 	sseClient *sse.Client,
 	gameService *connectfour.GameService,
 	chatService *chat.ChatService,
+	calculateNextMove engine.CalculateNextMove,
 	botId string,
-	gameId string,
-	width int,
-	chatId string,
-	currentPlayerId string,
+	game *connectfour.Game,
 ) error {
 	runningGamesGauge.Inc()
 	defer runningGamesGauge.Dec()
 
 	sseCtx, sseCancel := context.WithCancel(ctx)
 	defer sseCancel()
-	resCh, err := sseClient.Connect(sseCtx, "connect-four-"+gameId)
+	resCh, err := sseClient.Connect(sseCtx, "connect-four-"+game.GameId)
 	if err != nil {
 		return err
 	}
 
-	if currentPlayerId == botId {
-		if err := makeMove(botId, gameId, width, sseCtx, gameService); err != nil {
+	if game.CurrentPlayerId == botId {
+		if err := makeMove(botId, game, sseCtx, gameService, calculateNextMove); err != nil {
 			return err
 		}
 	}
@@ -58,11 +56,11 @@ func playThrough(
 
 			switch e := res.Event.(type) {
 			case sse.ChatAssigned:
-				chatId = e.ChatId
+				game.ChatId = e.ChatId
 
 				go chatService.WriteMessage(
 					ctx,
-					chatId,
+					game.ChatId,
 					botId,
 					"Good luck, have fun!",
 					"opening",
@@ -72,22 +70,26 @@ func playThrough(
 					continue
 				}
 
-				if err := makeMove(botId, gameId, width, sseCtx, gameService); err != nil {
+				if err := makeMove(botId, game, sseCtx, gameService, calculateNextMove); err != nil {
 					return err
 				}
 			case sse.PlayerMoved:
+				if ok := game.ApplyMove(e.X, e.Y); !ok {
+					continue
+				}
+
 				if e.NextPlayerId != botId {
 					continue
 				}
 
-				if err := makeMove(botId, gameId, width, sseCtx, gameService); err != nil {
+				if err := makeMove(botId, game, sseCtx, gameService, calculateNextMove); err != nil {
 					return err
 				}
 			case sse.GameAborted:
-				if chatId != "" {
+				if game.ChatId != "" {
 					go chatService.WriteMessage(
 						ctx,
-						chatId,
+						game.ChatId,
 						botId,
 						"Next time, perhaps!",
 						"ending",
@@ -98,10 +100,10 @@ func playThrough(
 				sse.GameDrawn,
 				sse.GameTimedOut,
 				sse.GameResigned:
-				if chatId != "" {
+				if game.ChatId != "" {
 					go chatService.WriteMessage(
 						ctx,
-						chatId,
+						game.ChatId,
 						botId,
 						"Good game! Well played.",
 						"ending",
@@ -113,16 +115,20 @@ func playThrough(
 	}
 }
 
-func makeMove(botId, gameId string, width int, sseCtx context.Context, gameService *connectfour.GameService) error {
-	for {
-		c := rand.Intn(width) + 1
-		errResp, err := gameService.MakeMove(sseCtx, gameId, botId, int32(c))
-		if err != nil {
-			return err
-		} else if errResp != nil && !errResp.HasViolation("column_already_filled") {
-			return nil
-		} else if errResp == nil && err == nil {
-			return nil
-		}
+func makeMove(
+	botId string,
+	game *connectfour.Game,
+	sseCtx context.Context,
+	gameService *connectfour.GameService,
+	calculateNextMove engine.CalculateNextMove,
+) error {
+	c, ok := calculateNextMove(game)
+	if !ok {
+		return nil // The engine couldn't find a valid move. The game is probably already finished.
 	}
+
+	// Ignoring errResp, probably the game is already finished if that's returned.
+	_, err := gameService.MakeMove(sseCtx, game.GameId, botId, int32(c))
+
+	return err
 }
