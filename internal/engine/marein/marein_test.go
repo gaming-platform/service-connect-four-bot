@@ -44,6 +44,16 @@ func TestBoardCases(t *testing.T) {
 					0 0 1 1 2 0 0`,
 			allowed: []int{1, 3, 4, 5, 7},
 		},
+		"IgnoreColumnsCreatingFork": {
+			// X would lead to a fork Y.
+			board: `0 0 0 0 0 0 0
+					0 0 0 0 0 0 0
+					0 0 X 2 1 0 0
+					0 0 1 1 2 0 0
+					0 0 2 2 1 Y 0
+					0 0 1 2 1 2 0`,
+			allowed: []int{1, 2, 4, 5, 6, 7},
+		},
 		"UseFirstWhenOnlyOptionIsLosing": {
 			board: `0 1 2 2 2 1 0
 					0 2 1 2 2 2 0
@@ -135,7 +145,7 @@ func TestBoardCases(t *testing.T) {
 					1 1 2 1 1 0 0`,
 			allowed: []int{1},
 		},
-		"DoNotCreateLosingForks1": {
+		"DoNotCreateLosingFork1": {
 			board: `0 0 1 2 0 0 0
 					0 0 2 1 1 0 0
 					0 0 1 1 1 0 0
@@ -144,7 +154,7 @@ func TestBoardCases(t *testing.T) {
 					0 2 2 1 2 0 0`,
 			allowed: []int{1, 5, 6, 7},
 		},
-		"DoNotCreateLosingForks2": {
+		"DoNotCreateLosingFork2": {
 			board: `0 0 0 1 0 0 0
 					0 0 0 1 0 0 0
 					0 0 0 1 2 0 0
@@ -152,6 +162,10 @@ func TestBoardCases(t *testing.T) {
 					0 1 2 1 2 1 0
 					0 1 2 1 2 2 2`,
 			allowed: []int{1, 2, 5, 6, 7},
+		},
+		"NoMoreMoves": {
+			board:   `1 2 1 2 1 2 1`,
+			allowed: []int{0},
 		},
 		//"ForcingMoveLeadsToFork1": {
 		//	// X forces Y, then Z can create a fork.
@@ -189,7 +203,7 @@ func runBoardCase(t *testing.T, c boardCase) {
 
 		found := false
 		for _, allowedX := range c.allowed {
-			if x == allowedX && ok {
+			if (x == allowedX && ok) || (x == 0 && allowedX == 0 && !ok) {
 				found = true
 			}
 		}

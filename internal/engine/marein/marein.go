@@ -48,7 +48,7 @@ func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 		return x, true
 	}
 
-	nonLosingColumns := filterNonLosingColumns(game, availableColumns)
+	nonLosingColumns := removeLosingColumns(game, availableColumns)
 	if len(nonLosingColumns) == 0 {
 		return availableColumns[0], true
 	}
@@ -65,12 +65,17 @@ func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 		return x, true
 	}
 
+	nonForkingColumns := removeForkingColumns(game, nonLosingColumns)
+	if len(nonForkingColumns) == 0 {
+		return nonLosingColumns[0], true
+	}
+
 	// ideas:
 	// * prefer moves creating clusters (low weight, probably before random)
 	// * check forcing moves (wins the opponent needs to prevent) and see if those are creating threats.
-	// * calculate forks that'll force a win, or prevent a loss in the future.
+	// * calculate future forks that'll force a win, or prevent a loss.
 
-	return findRandomLegalMoveThatPrefersCenter(game, nonLosingColumns), true
+	return findRandomLegalMoveThatPrefersCenter(game, nonForkingColumns), true
 }
 
 func findWinningMove(game *connectfour.Game, columns []int, color int) (int, bool) {
@@ -143,24 +148,8 @@ func findRandomLegalMoveThatPrefersCenter(game *connectfour.Game, columns []int)
 	return weightedColumns[rand.Intn(len(weightedColumns))]
 }
 
-func canOpponentWin(game *connectfour.Game) bool {
-	current, _ := game.GetCurrentPlayerColors()
-	availableColumns := game.GetAvailableColumns()
-
-	for _, x := range availableColumns {
-		y, _ := game.NextFreeRow(x)
-		gameClone := game.Clone()
-		gameClone.ApplyMove(x, y)
-
-		if connectfour.IsWinningMove(gameClone, x, y, current) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func filterNonLosingColumns(game *connectfour.Game, columns []int) []int {
+func removeLosingColumns(game *connectfour.Game, columns []int) []int {
+	_, opponent := game.GetCurrentPlayerColors()
 	nonLosingColumns := make([]int, 0)
 
 	for _, x := range columns {
@@ -168,12 +157,29 @@ func filterNonLosingColumns(game *connectfour.Game, columns []int) []int {
 		gameClone := game.Clone()
 		gameClone.ApplyMove(x, y)
 
-		if !canOpponentWin(gameClone) {
+		if _, ok := findWinningMove(gameClone, gameClone.GetAvailableColumns(), opponent); !ok {
 			nonLosingColumns = append(nonLosingColumns, x)
 		}
 	}
 
 	return nonLosingColumns
+}
+
+func removeForkingColumns(game *connectfour.Game, columns []int) []int {
+	_, opponent := game.GetCurrentPlayerColors()
+	nonForkingColumns := make([]int, 0)
+
+	for _, x := range columns {
+		y, _ := game.NextFreeRow(x)
+		gameClone := game.Clone()
+		gameClone.ApplyMove(x, y)
+
+		if _, ok := findForkingMove(gameClone, gameClone.GetAvailableColumns(), opponent); !ok {
+			nonForkingColumns = append(nonForkingColumns, x)
+		}
+	}
+
+	return nonForkingColumns
 }
 
 func removeColumn(columns []int, column int) []int {
