@@ -70,6 +70,10 @@ func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 		return nonLosingColumns[0], true
 	}
 
+	if x, ok := findForcingMove(game, nonForkingColumns); ok {
+		return x, true
+	}
+
 	// ideas:
 	// * prefer moves creating clusters (low weight, probably before random)
 	// * check forcing moves (wins the opponent needs to prevent) and see if those are creating threats.
@@ -128,6 +132,22 @@ func findForkingMove(game *connectfour.Game, columns []int, color int) (int, boo
 	return 0, false
 }
 
+func findForcingMove(game *connectfour.Game, columns []int) (int, bool) {
+	current, _ := game.GetCurrentPlayerColors()
+
+	for _, x := range columns {
+		y, _ := game.NextFreeRow(x)
+		gameClone := game.Clone()
+		gameClone.ApplyMove(x, y)
+
+		if _, ok := findWinningMove(gameClone, gameClone.GetAvailableColumnsContaining(columns), current); ok {
+			return x, true
+		}
+	}
+
+	return 0, false
+}
+
 func findRandomLegalMoveThatPrefersCenter(game *connectfour.Game, columns []int) int {
 	center := math.Ceil(float64(game.Width) / 2)
 	weightedColumns := make([]int, 0)
@@ -174,7 +194,7 @@ func removeForkingColumns(game *connectfour.Game, columns []int) []int {
 		gameClone := game.Clone()
 		gameClone.ApplyMove(x, y)
 
-		if _, ok := findForkingMove(gameClone, gameClone.GetAvailableColumns(), opponent); !ok {
+		if _, ok := findForkingMove(gameClone, gameClone.GetAvailableColumnsContaining(columns), opponent); !ok {
 			nonForkingColumns = append(nonForkingColumns, x)
 		}
 	}
