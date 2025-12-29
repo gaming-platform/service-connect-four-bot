@@ -1,6 +1,7 @@
 package engine_marein
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -35,16 +36,16 @@ func TestBoardCases(t *testing.T) {
 					1 2 2 2 0 0 0`,
 			allowed: []int{5},
 		},
-		"IgnoreLosingColumns": {
+		"IgnoreColumnsLeadingToLoss": {
 			board: `0 0 0 0 0 0 0
 					0 0 0 0 0 0 0
 					0 0 1 0 0 0 0
 					0 0 1 0 0 0 0
 					0 0 2 2 2 0 0
-					0 0 1 1 2 0 0`,
+					0 X 1 1 2 X 0`,
 			allowed: []int{1, 3, 4, 5, 7},
 		},
-		"IgnoreColumnsCreatingFork": {
+		"IgnoreColumnsLeadingToOpponentFork": {
 			// X would lead to a fork Y.
 			board: `0 0 0 0 0 0 0
 					0 0 0 0 0 0 0
@@ -167,27 +168,38 @@ func TestBoardCases(t *testing.T) {
 			board:   `1 2 1 2 1 2 1`,
 			allowed: []int{0},
 		},
-		//"ForcingMoveLeadsToFork1": {
-		//	// X forces Y, then Z can create a fork.
-		//	board: `0 0 0 1 2 0 0
-		//			0 0 0 1 1 0 0
-		//			0 0 0 1 1 2 1
-		//			0 0 0 2 2 1 2
-		//			0 Z 1 1 2 2 2
-		//			Y X 1 1 2 2 2`,
-		//	allowed: []int{2},
-		//},
-		//"ForcingMoveLeadsToFork2": {
-		//	// X forces Y, then Z creates a future fork.
-		//	// A, B, C, D shows an example continuation.
-		//	board: `0 0 2 1 2 0 0
-		//			0 0 1 1 2 A D
-		//			0 0 2 1 1 Z C
-		//			0 0 2 2 1 X B
-		//			0 0 1 1 1 2 Y
-		//			2 0 2 1 2 1 2`,
-		//	allowed: []int{6},
-		//},
+		"ForcingMoveLeadsToFork1": {
+			// X forces Y, then Z can create a fork.
+			board: `0 0 0 1 2 0 0
+					0 0 0 1 1 0 0
+					0 0 0 1 1 2 1
+					0 0 0 2 2 1 2
+					0 Z 1 1 2 2 2
+					X Y 1 1 2 2 2`,
+			allowed: []int{1},
+		},
+		"ForcingMoveLeadsToFork2": {
+			// X forces Y, then Z creates a future fork.
+			// A, B, C, D shows an example continuation.
+			board: `0 0 2 1 2 0 0
+					0 0 1 1 2 A D
+					0 0 2 1 1 Z C
+					0 0 2 2 1 X B
+					0 2 1 1 1 2 Y
+					2 1 2 1 2 1 2`,
+			allowed: []int{6},
+		},
+		"ForcingMoveLeadsToFork3": {
+			// X forces Y, Z forces A, then B creates a future fork.
+			// A, B, C, D shows an example continuation.
+			board: `0 0 0 2 0 0 0
+					0 0 0 2 0 0 0
+					0 0 Y 1 A 0 0
+					0 0 X 2 Z 0 0
+					0 B 1 2 1 0 0
+					0 2 1 1 1 2 0`,
+			allowed: []int{3},
+		},
 	}
 
 	for name, c := range boardCases {
@@ -201,14 +213,7 @@ func runBoardCase(t *testing.T, c boardCase) {
 		game := newGameFromAscii(c.board)
 		x, ok := calculateNextMove(game, NewOptions(100))
 
-		found := false
-		for _, allowedX := range c.allowed {
-			if (x == allowedX && ok) || (x == 0 && allowedX == 0 && !ok) {
-				found = true
-			}
-		}
-
-		if !found {
+		if !slices.Contains[[]int, int](c.allowed, x) || (x == 0 && ok) || (x != 0 && !ok) {
 			t.Fatalf("iteration %d returned %d, %v; allowed one of %v", i+1, x, ok, c.allowed)
 		}
 	}

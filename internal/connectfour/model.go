@@ -87,6 +87,18 @@ func (g *Game) GetAvailableColumns() []int {
 	return availableColumns
 }
 
+func (g *Game) GetAvailableColumnsContaining(columns []int) []int {
+	availableColumns := make([]int, 0)
+
+	for _, x := range columns {
+		if _, ok := g.NextFreeRow(x); ok {
+			availableColumns = append(availableColumns, x)
+		}
+	}
+
+	return availableColumns
+}
+
 func (g *Game) NextFreeRow(x int) (int, bool) {
 	for y := g.Height; y >= 1; y-- {
 		if _, ok := g.GetMoveAt(x, y); !ok {
