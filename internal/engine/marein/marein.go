@@ -65,13 +65,13 @@ func calculateNextMove(game *connectfour.Game, options Options) (int, bool) {
 		return x, true
 	}
 
+	if x, ok := findForcingMove(game, nonLosingColumns); ok {
+		return x, true
+	}
+
 	nonForkingColumns := removeForkingColumns(game, nonLosingColumns)
 	if len(nonForkingColumns) == 0 {
 		return nonLosingColumns[0], true
-	}
-
-	if x, ok := findForcingMove(game, nonForkingColumns); ok {
-		return x, true
 	}
 
 	// ideas:
